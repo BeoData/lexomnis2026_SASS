@@ -29,6 +29,16 @@ TENANT_APP_URL=http://localhost:8000
 TENANT_APP_API_TOKEN=your-api-token-here
 ```
 
+**Kako da dobiješ API token:**
+
+1. Idi u Tenant App (`C:\var\LexOmnisC`)
+2. Pokreni seeder:
+```bash
+php artisan db:seed --class=ApiTokenSeeder
+```
+3. Kopiraj token koji se prikaže
+4. Dodaj ga u Super Admin App `.env` fajl
+
 ## 🔐 Login
 
 **URL:** `http://localhost:8001/login`
@@ -45,8 +55,11 @@ TENANT_APP_API_TOKEN=your-api-token-here
 # Terminal 1: Laravel server
 php artisan serve --port=8001
 
-# Terminal 2: Vite dev server
+# Terminal 2: Vite dev server (za development)
 npm run dev
+
+# Ili build assets (za produkciju)
+npm run build
 ```
 
 Zatim idite na: `http://localhost:8001/login`
@@ -55,11 +68,11 @@ Zatim idite na: `http://localhost:8001/login`
 
 - ✅ Super Admin autentifikacija (login/logout)
 - ✅ Dashboard (osnovni)
-- ⏳ Tenant Management (CRUD, suspend, activate)
-- ⏳ Global User Management (search, suspend, impersonate)
+- ✅ Tenant Management (CRUD, suspend, activate)
+- ✅ User Management (search, suspend, impersonate)
+- ✅ System Monitoring (health, metrics, activity logs)
 - ⏳ Subscription & Billing Management
 - ⏳ Feature Flags Management
-- ⏳ System Monitoring (health, metrics, activity logs)
 - ⏳ Audit & Security (audit logs, login history)
 
 ## 📚 API Dokumentacija
@@ -70,3 +83,14 @@ Svi API endpoint-i su dokumentovani u Tenant App: `API_DOCUMENTATION.md`
 
 Super Admin App komunicira sa Tenant App preko REST API-ja. 
 API token se generiše u Tenant App-u i koristi se u Super Admin App-u.
+
+## 🐛 Troubleshooting
+
+Ako vidiš samo `@routes` umesto aplikacije:
+1. Proveri da li je `npm run dev` pokrenut
+2. Ili pokreni `npm run build` za produkciju
+
+Ako dobiješ grešku o API token-u:
+1. Proveri da li je `TENANT_APP_API_TOKEN` postavljen u `.env` fajlu
+2. Pokreni `php artisan config:clear` nakon izmene `.env` fajla
+3. Proveri da li je token kreiran u Tenant App bazi
