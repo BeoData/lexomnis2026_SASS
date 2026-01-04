@@ -9,16 +9,20 @@ use Illuminate\Support\Facades\Cache;
 class TenantAppApiService
 {
     protected string $baseUrl;
-    protected string $apiToken;
+    protected ?string $apiToken;
     protected int $timeout;
     protected int $retryAttempts;
 
     public function __construct()
     {
         $this->baseUrl = config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
-        $this->apiToken = config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN'));
+        $this->apiToken = config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
         $this->timeout = config('services.tenant_app.timeout', 30);
         $this->retryAttempts = config('services.tenant_app.retry_attempts', 3);
+        
+        if (!$this->apiToken) {
+            throw new \RuntimeException('TENANT_APP_API_TOKEN is not configured. Please set it in your .env file.');
+        }
     }
 
     /**
@@ -26,6 +30,14 @@ class TenantAppApiService
      */
     protected function request(string $method, string $endpoint, array $data = [], array $headers = []): array
     {
+        if (!$this->apiToken) {
+            return [
+                'success' => false,
+                'error' => 'API token is not configured. Please set TENANT_APP_API_TOKEN in your .env file.',
+                'status' => 500,
+            ];
+        }
+        
         $url = rtrim($this->baseUrl, '/') . '/api/admin/' . ltrim($endpoint, '/');
         
         $defaultHeaders = [
