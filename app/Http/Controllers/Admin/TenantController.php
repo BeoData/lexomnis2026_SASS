@@ -43,10 +43,15 @@ class TenantController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:255',
-            'country' => 'nullable|string|max:255|default:RS',
-            'timezone' => 'nullable|string|default:Europe/Belgrade',
-            'currency' => 'nullable|string|max:3|default:RSD',
+            'country' => 'nullable|string|max:255',
+            'timezone' => 'nullable|string',
+            'currency' => 'nullable|string|max:3',
         ]);
+
+        // Set defaults if not provided
+        $validated['country'] = $validated['country'] ?? 'RS';
+        $validated['timezone'] = $validated['timezone'] ?? 'Europe/Belgrade';
+        $validated['currency'] = $validated['currency'] ?? 'RSD';
 
         $response = $this->apiService->createTenant($validated);
 
