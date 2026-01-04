@@ -50,4 +50,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/health', [App\Http\Controllers\Admin\SystemController::class, 'health'])->name('health');
         Route::get('/metrics', [App\Http\Controllers\Admin\SystemController::class, 'metrics'])->name('metrics');
     });
+    
+    // Settings
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('index');
+        Route::put('/', [App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('update');
+    });
 });
