@@ -11,9 +11,15 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .mount(el);
+        const app = createApp({ render: () => h(App, props) })
+            .use(plugin);
+        
+        // Make route() helper available globally
+        if (window.route) {
+            app.config.globalProperties.route = window.route;
+        }
+        
+        return app.mount(el);
     },
     progress: {
         color: '#2563eb',

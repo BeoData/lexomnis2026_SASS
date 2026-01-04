@@ -1,49 +1,44 @@
 <template>
-    <div class="min-h-screen bg-gray-50">
+    <AuthenticatedLayout>
         <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="px-4 py-6 sm:px-0">
-                <div class="border-4 border-dashed border-gray-200 rounded-lg p-8">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-4">
-                        Super Admin Dashboard
-                    </h1>
-                    <p class="text-gray-600 mb-6">
-                        Welcome to LexOmnis Super Admin Panel
-                    </p>
-                    <div class="space-y-4">
-                        <div class="bg-white p-4 rounded-lg shadow">
-                            <h2 class="text-xl font-semibold mb-2">Tenant Management</h2>
-                            <p class="text-gray-600">Manage all tenants (firms) in the system</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow">
-                            <h2 class="text-xl font-semibold mb-2">User Management</h2>
-                            <p class="text-gray-600">View and manage all users across tenants</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow">
-                            <h2 class="text-xl font-semibold mb-2">System Monitoring</h2>
-                            <p class="text-gray-600">Monitor system health and performance</p>
-                        </div>
-                    </div>
-                    <div class="mt-6">
-                        <form @submit.prevent="logout" method="post">
-                            <button
-                                type="submit"
-                                class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded"
-                            >
-                                Logout
-                            </button>
-                        </form>
-                    </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">
+                    Super Admin Dashboard
+                </h1>
+                <p class="text-gray-600 mb-8">
+                    Welcome to LexOmnis Super Admin Panel
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Link
+                        :href="route('tenants.index')"
+                        class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
+                    >
+                        <h2 class="text-xl font-semibold mb-2 text-gray-900">Tenant Management</h2>
+                        <p class="text-gray-600">Manage all tenants (firms) in the system</p>
+                    </Link>
+                    <Link
+                        :href="route('users.index')"
+                        class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
+                    >
+                        <h2 class="text-xl font-semibold mb-2 text-gray-900">User Management</h2>
+                        <p class="text-gray-600">View and manage all users across tenants</p>
+                    </Link>
+                    <Link
+                        :href="route('system.index')"
+                        class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
+                    >
+                        <h2 class="text-xl font-semibold mb-2 text-gray-900">System Monitoring</h2>
+                        <p class="text-gray-600">Monitor system health and performance</p>
+                    </Link>
                 </div>
             </div>
         </div>
-    </div>
+    </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { router } from '@inertiajs/vue3';
-
-const logout = () => {
-    router.post('/logout');
-};
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Link } from '@inertiajs/vue3';
 </script>
 

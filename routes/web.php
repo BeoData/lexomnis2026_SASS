@@ -22,4 +22,32 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
         return inertia('Dashboard');
     })->name('dashboard');
+    
+    // Tenant Management
+    Route::prefix('tenants')->name('tenants.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\TenantController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\Admin\TenantController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\Admin\TenantController::class, 'store'])->name('store');
+        Route::get('/{id}', [App\Http\Controllers\Admin\TenantController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [App\Http\Controllers\Admin\TenantController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [App\Http\Controllers\Admin\TenantController::class, 'update'])->name('update');
+        Route::post('/{id}/suspend', [App\Http\Controllers\Admin\TenantController::class, 'suspend'])->name('suspend');
+        Route::post('/{id}/activate', [App\Http\Controllers\Admin\TenantController::class, 'activate'])->name('activate');
+    });
+    
+    // User Management
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\UserController::class, 'index'])->name('index');
+        Route::get('/{id}', [App\Http\Controllers\Admin\UserController::class, 'show'])->name('show');
+        Route::post('/{id}/suspend', [App\Http\Controllers\Admin\UserController::class, 'suspend'])->name('suspend');
+        Route::post('/{id}/reset-password', [App\Http\Controllers\Admin\UserController::class, 'resetPassword'])->name('reset-password');
+        Route::post('/{id}/impersonate', [App\Http\Controllers\Admin\UserController::class, 'impersonate'])->name('impersonate');
+    });
+    
+    // System Monitoring
+    Route::prefix('system')->name('system.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\SystemController::class, 'index'])->name('index');
+        Route::get('/health', [App\Http\Controllers\Admin\SystemController::class, 'health'])->name('health');
+        Route::get('/metrics', [App\Http\Controllers\Admin\SystemController::class, 'metrics'])->name('metrics');
+    });
 });
