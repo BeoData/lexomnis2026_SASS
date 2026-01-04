@@ -14,8 +14,8 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) })
             .use(plugin);
         
-        // Make route() helper available globally
-        if (window.route) {
+        // Make route() helper available globally from Ziggy
+        if (typeof window !== 'undefined' && window.route) {
             app.config.globalProperties.route = window.route;
         }
         
