@@ -16,17 +16,26 @@ class TenantAppApiService
     public function __construct()
     {
         // Try to get from settings first, then fallback to config/env
-        $this->baseUrl = \App\Models\Setting::get('tenant_app_url') 
-            ?: config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
-        
-        $this->apiToken = \App\Models\Setting::get('tenant_app_api_token') 
-            ?: config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
-        
-        $this->timeout = (int) (\App\Models\Setting::get('tenant_app_timeout') 
-            ?: config('services.tenant_app.timeout', 30));
-        
-        $this->retryAttempts = (int) (\App\Models\Setting::get('tenant_app_retry_attempts') 
-            ?: config('services.tenant_app.retry_attempts', 3));
+        // Use try-catch in case settings table doesn't exist yet
+        try {
+            $this->baseUrl = \App\Models\Setting::get('tenant_app_url') 
+                ?: config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
+            
+            $this->apiToken = \App\Models\Setting::get('tenant_app_api_token') 
+                ?: config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
+            
+            $this->timeout = (int) (\App\Models\Setting::get('tenant_app_timeout') 
+                ?: config('services.tenant_app.timeout', 30));
+            
+            $this->retryAttempts = (int) (\App\Models\Setting::get('tenant_app_retry_attempts') 
+                ?: config('services.tenant_app.retry_attempts', 3));
+        } catch (\Exception $e) {
+            // Fallback to config/env if settings table doesn't exist
+            $this->baseUrl = config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
+            $this->apiToken = config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
+            $this->timeout = config('services.tenant_app.timeout', 30);
+            $this->retryAttempts = config('services.tenant_app.retry_attempts', 3);
+        }
         
         if (!$this->apiToken) {
             throw new \RuntimeException('TENANT_APP_API_TOKEN is not configured. Please set it in Settings or .env file.');
