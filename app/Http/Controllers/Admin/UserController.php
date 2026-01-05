@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\TenantAppApiService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class UserController extends Controller
 {
@@ -25,7 +24,7 @@ class UserController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to fetch users']);
         }
 
-        return Inertia::render('Users/Index', [
+        return view('admin.users.index', [
             'users' => $response['data']['data'] ?? [],
             'pagination' => $response['data'] ?? [],
             'filters' => $filters,
@@ -40,7 +39,7 @@ class UserController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'User not found']);
         }
 
-        return Inertia::render('Users/Show', [
+        return view('admin.users.show', [
             'user' => $response['data'] ?? [],
         ]);
     }

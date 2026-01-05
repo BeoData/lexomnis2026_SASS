@@ -122,6 +122,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Pages/Layouts/AuthenticatedLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
+import { useRoute } from '@/composables/useRoute';
 
 const props = defineProps({
     errors: {
@@ -129,6 +130,8 @@ const props = defineProps({
         default: () => ({}),
     },
 });
+
+const { route } = useRoute();
 
 const form = useForm({
     name: '',
@@ -140,7 +143,17 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('tenants.store'));
+    if (form.processing) {
+        return; // Prevent double submission
+    }
+    
+    form.post(route('tenants.store'), {
+        onError: (errors) => {
+            if (errors.error) {
+                alert('Error: ' + errors.error);
+            }
+        },
+    });
 };
 </script>
 

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\TenantAppApiService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class TenantController extends Controller
 {
@@ -25,7 +24,7 @@ class TenantController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to fetch tenants']);
         }
 
-        return Inertia::render('Tenants/Index', [
+        return view('admin.tenants.index', [
             'tenants' => $response['data']['data'] ?? [],
             'pagination' => $response['data'] ?? [],
             'filters' => $filters,
@@ -34,7 +33,7 @@ class TenantController extends Controller
 
     public function create()
     {
-        return Inertia::render('Tenants/Create');
+        return view('admin.tenants.create');
     }
 
     public function store(Request $request)
@@ -53,14 +52,24 @@ class TenantController extends Controller
         $validated['timezone'] = $validated['timezone'] ?? 'Europe/Belgrade';
         $validated['currency'] = $validated['currency'] ?? 'RSD';
 
-        $response = $this->apiService->createTenant($validated);
+        \Log::info('Creating tenant', ['data' => $validated]);
 
-        if (!$response['success']) {
-            return back()->withErrors(['error' => $response['error'] ?? 'Failed to create tenant']);
+        try {
+            $response = $this->apiService->createTenant($validated);
+
+            \Log::info('API response', ['response' => $response]);
+
+            if (!$response['success']) {
+                \Log::error('Failed to create tenant', ['error' => $response['error'] ?? 'Unknown error', 'status' => $response['status'] ?? null]);
+                return back()->withErrors(['error' => $response['error'] ?? 'Failed to create tenant']);
+            }
+
+            return redirect()->route('tenants.index')
+                ->with('success', 'Tenant created successfully');
+        } catch (\Exception $e) {
+            \Log::error('Exception creating tenant', ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return back()->withErrors(['error' => 'An error occurred: ' . $e->getMessage()]);
         }
-
-        return redirect()->route('tenants.index')
-            ->with('success', 'Tenant created successfully');
     }
 
     public function show(string $id)
@@ -71,7 +80,7 @@ class TenantController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Tenant not found']);
         }
 
-        return Inertia::render('Tenants/Show', [
+        return view('admin.tenants.show', [
             'tenant' => $response['data'] ?? [],
         ]);
     }
@@ -84,7 +93,7 @@ class TenantController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Tenant not found']);
         }
 
-        return Inertia::render('Tenants/Edit', [
+        return view('admin.tenants.edit', [
             'tenant' => $response['data'] ?? [],
         ]);
     }

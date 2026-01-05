@@ -16,9 +16,11 @@
                     <div class="flex space-x-2">
                         <button
                             @click="impersonateUser"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+                            :disabled="impersonating"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Impersonate
+                            <span v-if="impersonating">Redirecting...</span>
+                            <span v-else>Impersonate</span>
                         </button>
                         <button
                             @click="resetPassword"
@@ -86,6 +88,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Pages/Layouts/AuthenticatedLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { useRoute } from '@/composables/useRoute';
 
 const props = defineProps({
     user: {
@@ -94,9 +98,26 @@ const props = defineProps({
     },
 });
 
+const { route } = useRoute();
+const impersonating = ref(false);
+
 const impersonateUser = () => {
-    if (confirm('Are you sure you want to impersonate this user?')) {
-        router.post(route('users.impersonate', props.user.id));
+    if (confirm('Are you sure you want to impersonate this user? You will be redirected to the tenant application.')) {
+        impersonating.value = true;
+        router.post(route('users.impersonate', props.user.id), {}, {
+            onSuccess: () => {
+                // Redirect will happen automatically
+            },
+            onError: (errors) => {
+                impersonating.value = false;
+                if (errors.error) {
+                    alert('Error: ' + errors.error);
+                }
+            },
+            onFinish: () => {
+                impersonating.value = false;
+            },
+        });
     }
 };
 

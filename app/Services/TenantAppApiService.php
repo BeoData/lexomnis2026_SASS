@@ -70,9 +70,22 @@ class TenantAppApiService
 
         while ($attempt < $this->retryAttempts) {
             try {
+                Log::info('TenantAppApiService making request', [
+                    'method' => $method,
+                    'url' => $url,
+                    'data' => $data,
+                    'attempt' => $attempt + 1,
+                ]);
+
                 $response = Http::timeout($this->timeout)
                     ->withHeaders($headers)
                     ->{strtolower($method)}($url, $data);
+
+                Log::info('TenantAppApiService response', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'successful' => $response->successful(),
+                ]);
 
                 if ($response->successful()) {
                     return [
@@ -248,6 +261,11 @@ class TenantAppApiService
     public function getFeatureFlags(array $filters = []): array
     {
         return $this->request('GET', 'feature-flags', $filters);
+    }
+
+    public function getFeatureFlag(int $id): array
+    {
+        return $this->request('GET', "feature-flags/{$id}");
     }
 
     public function getTenantFeatureFlags(int $tenantId): array

@@ -24,6 +24,7 @@ export default defineConfig({
         alias: {
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
         },
+        extensions: ['.js', '.vue', '.json'],
     },
     server: {
         watch: {

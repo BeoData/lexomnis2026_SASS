@@ -19,9 +19,7 @@ Route::post('/login', [LoginController::class, 'login']);
 Route::middleware(['auth'])->group(function () {
     Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
     
-    Route::get('/dashboard', function () {
-        return inertia('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
     
     // Tenant Management
     Route::prefix('tenants')->name('tenants.')->group(function () {
@@ -55,5 +53,38 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('index');
         Route::put('/', [App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('update');
+        Route::post('/test-connection', [App\Http\Controllers\Admin\SettingsController::class, 'testConnection'])->name('test-connection');
+    });
+    
+    // Plans Management
+    Route::prefix('plans')->name('plans.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\PlanController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\Admin\PlanController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\Admin\PlanController::class, 'store'])->name('store');
+        Route::get('/{id}', [App\Http\Controllers\Admin\PlanController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [App\Http\Controllers\Admin\PlanController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [App\Http\Controllers\Admin\PlanController::class, 'update'])->name('update');
+    });
+    
+    // Subscriptions Management
+    Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\SubscriptionController::class, 'index'])->name('index');
+        Route::get('/{id}', [App\Http\Controllers\Admin\SubscriptionController::class, 'show'])->name('show');
+    });
+    
+    // Feature Flags Management
+    Route::prefix('feature-flags')->name('feature-flags.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\FeatureFlagController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\Admin\FeatureFlagController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\Admin\FeatureFlagController::class, 'store'])->name('store');
+        Route::get('/{id}', [App\Http\Controllers\Admin\FeatureFlagController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [App\Http\Controllers\Admin\FeatureFlagController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [App\Http\Controllers\Admin\FeatureFlagController::class, 'update'])->name('update');
+    });
+    
+    // Audit Logs & Security
+    Route::prefix('audit-logs')->name('audit-logs.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\AuditLogController::class, 'index'])->name('index');
+        Route::get('/{id}', [App\Http\Controllers\Admin\AuditLogController::class, 'show'])->name('show');
     });
 });

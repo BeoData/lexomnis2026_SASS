@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
 
 class SettingsController extends Controller
 {
@@ -34,8 +35,12 @@ class SettingsController extends Controller
             }),
         ];
 
-        return Inertia::render('Settings/Index', [
+        // Check API connection status
+        $apiConnectionStatus = $this->checkApiConnection();
+
+        return view('admin.settings.index', [
             'groups' => $groups,
+            'apiConnectionStatus' => $apiConnectionStatus,
         ]);
     }
 
@@ -46,6 +51,20 @@ class SettingsController extends Controller
             'settings.*.key' => 'required|string',
             'settings.*.value' => 'nullable',
         ]);
+
+        // Additional validation for API settings
+        foreach ($validated['settings'] as $settingData) {
+            if ($settingData['key'] === 'tenant_app_url' && !empty($settingData['value'])) {
+                if (!filter_var($settingData['value'], FILTER_VALIDATE_URL)) {
+                    return redirect()->back()
+                        ->withErrors(['settings' => 'Invalid URL format for Tenant App URL.']);
+                }
+            }
+            if ($settingData['key'] === 'tenant_app_api_token' && empty($settingData['value'])) {
+                return redirect()->back()
+                    ->withErrors(['settings' => 'API Token is required.']);
+            }
+        }
 
         foreach ($validated['settings'] as $settingData) {
             $setting = Setting::where('key', $settingData['key'])->first();
@@ -107,5 +126,99 @@ class SettingsController extends Controller
         }
 
         file_put_contents($envPath, $envContent);
+    }
+
+    /**
+     * Test API connection
+     */
+    public function testConnection(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'url' => 'required|url',
+            'token' => 'required|string',
+        ]);
+
+        try {
+            $url = rtrim($validated['url'], '/') . '/api/admin/system/health';
+            $token = $validated['token'];
+
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $token,
+                    'Accept' => 'application/json',
+                ])
+                ->get($url);
+
+            if ($response->successful()) {
+                return response()->json([
+                    'success' => true,
+                    'status' => $response->status(),
+                    'message' => 'Connection successful!',
+                    'data' => $response->json(),
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'status' => $response->status(),
+                'message' => $response->json()['message'] ?? 'Connection failed',
+                'data' => $response->json(),
+            ], $response->status());
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Connection error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Check API connection status using current settings
+     */
+    protected function checkApiConnection(): array
+    {
+        try {
+            $url = Setting::get('tenant_app_url');
+            $token = Setting::get('tenant_app_api_token');
+
+            if (!$url || !$token) {
+                return [
+                    'connected' => false,
+                    'status' => 'not_configured',
+                    'message' => 'API URL or Token not configured',
+                ];
+            }
+
+            $apiUrl = rtrim($url, '/') . '/api/admin/system/health';
+
+            $response = Http::timeout(5)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $token,
+                    'Accept' => 'application/json',
+                ])
+                ->get($apiUrl);
+
+            if ($response->successful()) {
+                return [
+                    'connected' => true,
+                    'status' => 'connected',
+                    'message' => 'API connection successful',
+                ];
+            }
+
+            return [
+                'connected' => false,
+                'status' => 'disconnected',
+                'message' => $response->json()['message'] ?? 'Connection failed',
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'connected' => false,
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ];
+        }
     }
 }

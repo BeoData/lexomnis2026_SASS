@@ -118,6 +118,9 @@
 import AuthenticatedLayout from '@/Pages/Layouts/AuthenticatedLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { useRoute } from '@/composables/useRoute';
+
+const { route } = useRoute();
 
 const props = defineProps({
     tenants: {

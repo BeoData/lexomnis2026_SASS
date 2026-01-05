@@ -4,13 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title inertia>{{ config('app.name', 'LexOmnis Super Admin') }}</title>
-        @routes
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @inertiaHead
+        <title>{{ config('app.name', 'LexOmnis Super Admin') }}</title>
+        @vite(['resources/css/app.css'])
     </head>
     <body class="font-sans antialiased">
-        @inertia
+        <!-- This file is kept for compatibility but layouts should use admin/layout.blade.php or auth/layout.blade.php -->
     </body>
 </html>
 

@@ -54,9 +54,11 @@
                                     <div class="flex items-center space-x-2">
                                         <button
                                             @click.stop.prevent="impersonateUser(user.id)"
-                                            class="text-blue-600 hover:text-blue-900 text-sm"
+                                            :disabled="impersonating[user.id]"
+                                            class="text-blue-600 hover:text-blue-900 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Impersonate
+                                            <span v-if="impersonating[user.id]">Redirecting...</span>
+                                            <span v-else>Impersonate</span>
                                         </button>
                                     </div>
                                 </div>
@@ -119,9 +121,25 @@ const filter = () => {
     });
 };
 
+const impersonating = ref({});
+
 const impersonateUser = (id) => {
-    if (confirm('Are you sure you want to impersonate this user?')) {
-        router.post(route('users.impersonate', id));
+    if (confirm('Are you sure you want to impersonate this user? You will be redirected to the tenant application.')) {
+        impersonating.value[id] = true;
+        router.post(route('users.impersonate', id), {}, {
+            onSuccess: () => {
+                // Redirect will happen automatically
+            },
+            onError: (errors) => {
+                impersonating.value[id] = false;
+                if (errors.error) {
+                    alert('Error: ' + errors.error);
+                }
+            },
+            onFinish: () => {
+                impersonating.value[id] = false;
+            },
+        });
     }
 };
 </script>
