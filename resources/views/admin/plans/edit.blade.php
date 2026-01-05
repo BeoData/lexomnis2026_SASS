@@ -36,8 +36,11 @@
                         <div>
                             <label for="billing_cycle" class="block text-sm font-medium text-gray-700">Billing Cycle</label>
                             <select id="billing_cycle" name="billing_cycle" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                <option value="monthly" {{ old('billing_cycle', $plan['billing_cycle'] ?? 'monthly') === 'monthly' ? 'selected' : '' }}>Monthly</option>
-                                <option value="yearly" {{ old('billing_cycle', $plan['billing_cycle'] ?? 'monthly') === 'yearly' ? 'selected' : '' }}>Yearly</option>
+                                @php
+                                    $billingCycle = old('billing_cycle', $plan['billing_cycle'] ?? $plan['billing_period'] ?? 'monthly');
+                                @endphp
+                                <option value="monthly" {{ $billingCycle === 'monthly' ? 'selected' : '' }}>Monthly</option>
+                                <option value="yearly" {{ $billingCycle === 'yearly' ? 'selected' : '' }}>Yearly</option>
                             </select>
                         </div>
                     </div>

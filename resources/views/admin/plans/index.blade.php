@@ -28,8 +28,11 @@
                     </div>
 
                     <div class="mb-4">
+                        @php
+                            $billingPeriod = $plan['billing_period'] ?? $plan['billing_cycle'] ?? 'monthly';
+                        @endphp
                         <div class="text-2xl font-bold text-gray-900">${{ $plan['price'] ?? '0' }}</div>
-                        <div class="text-sm text-gray-600">/ {{ ($plan['billing_cycle'] ?? 'monthly') === 'monthly' ? 'month' : 'year' }}</div>
+                        <div class="text-sm text-gray-600">/ {{ $billingPeriod === 'monthly' ? 'month' : 'year' }}</div>
                     </div>
 
                     @if(isset($plan['features']) && is_array($plan['features']) && count($plan['features']) > 0)

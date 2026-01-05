@@ -25,8 +25,11 @@
                     </dd>
                 </div>
                 <div>
+                    @php
+                        $billingPeriod = $plan['billing_period'] ?? $plan['billing_cycle'] ?? 'monthly';
+                    @endphp
                     <dt class="text-sm font-medium text-gray-500">Price</dt>
-                    <dd class="mt-1 text-sm text-gray-900">${{ $plan['price'] ?? '0' }} / {{ ($plan['billing_cycle'] ?? 'monthly') === 'monthly' ? 'month' : 'year' }}</dd>
+                    <dd class="mt-1 text-sm text-gray-900">${{ $plan['price'] ?? '0' }} / {{ $billingPeriod === 'monthly' ? 'month' : 'year' }}</dd>
                 </div>
                 @if(isset($plan['description']))
                     <div>
@@ -36,7 +39,7 @@
                 @endif
                 <div>
                     <dt class="text-sm font-medium text-gray-500">Billing Cycle</dt>
-                    <dd class="mt-1 text-sm text-gray-900 capitalize">{{ $plan['billing_cycle'] ?? 'monthly' }}</dd>
+                    <dd class="mt-1 text-sm text-gray-900 capitalize">{{ $billingPeriod }}</dd>
                 </div>
                 @if(isset($plan['features']) && is_array($plan['features']) && count($plan['features']) > 0)
                     <div>

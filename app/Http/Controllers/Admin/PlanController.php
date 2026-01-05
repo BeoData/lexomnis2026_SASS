@@ -48,7 +48,14 @@ class PlanController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        $response = $this->apiService->createPlan($validated);
+        // Map billing_cycle to billing_period for API
+        $apiData = $validated;
+        if (isset($apiData['billing_cycle'])) {
+            $apiData['billing_period'] = $apiData['billing_cycle'];
+            unset($apiData['billing_cycle']);
+        }
+
+        $response = $this->apiService->createPlan($apiData);
 
         if (!$response['success']) {
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to create plan']);
@@ -79,8 +86,14 @@ class PlanController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Plan not found']);
         }
 
+        // Map billing_period from API to billing_cycle for form
+        $plan = $response['data'] ?? [];
+        if (isset($plan['billing_period'])) {
+            $plan['billing_cycle'] = $plan['billing_period'];
+        }
+
         return view('admin.plans.edit', [
-            'plan' => $response['data'] ?? [],
+            'plan' => $plan,
         ]);
     }
 
@@ -96,7 +109,14 @@ class PlanController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        $response = $this->apiService->updatePlan((int) $id, $validated);
+        // Map billing_cycle to billing_period for API
+        $apiData = $validated;
+        if (isset($apiData['billing_cycle'])) {
+            $apiData['billing_period'] = $apiData['billing_cycle'];
+            unset($apiData['billing_cycle']);
+        }
+
+        $response = $this->apiService->updatePlan((int) $id, $apiData);
 
         if (!$response['success']) {
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to update plan']);
