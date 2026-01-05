@@ -24,9 +24,29 @@ class PlanController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to fetch plans']);
         }
 
+        // Handle both paginated and non-paginated responses
+        $data = $response['data'] ?? [];
+        
+        // If data is paginated (has 'data' key), use it; otherwise use data directly
+        if (is_array($data) && isset($data['data']) && is_array($data['data'])) {
+            $plans = $data['data'];
+        } elseif (is_array($data) && !isset($data['data'])) {
+            // If data is a direct array of plans
+            $plans = $data;
+        } else {
+            $plans = [];
+        }
+
+        // Log for debugging (remove in production)
+        \Log::info('Plans index response', [
+            'response_structure' => array_keys($data ?? []),
+            'plans_count' => count($plans),
+            'has_data_key' => isset($data['data']),
+        ]);
+
         return view('admin.plans.index', [
-            'plans' => $response['data']['data'] ?? [],
-            'pagination' => $response['data'] ?? [],
+            'plans' => $plans,
+            'pagination' => $data,
             'filters' => $filters,
         ]);
     }
