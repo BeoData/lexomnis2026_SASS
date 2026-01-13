@@ -42,16 +42,33 @@
 
                     <div>
                         <label for="email" class="block text-sm font-medium text-gray-700">
-                            Email
+                            Email *
                         </label>
                         <input
                             id="email"
                             name="email"
                             type="email"
+                            required
                             value="{{ old('email') }}"
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('email') border-red-300 @enderror"
                         />
                         @error('email')
+                            <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">
+                            Password *
+                        </label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            required
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('password') border-red-300 @enderror"
+                        />
+                        @error('password')
                             <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
                         @enderror
                     </div>

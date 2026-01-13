@@ -39,12 +39,13 @@ class TenantController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:255',
-            'country' => 'nullable|string|max:255',
-            'timezone' => 'nullable|string',
-            'currency' => 'nullable|string|max:3',
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'password' => ['required', 'string', 'min:8'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'country' => ['nullable', 'string', 'max:255'],
+            'timezone' => ['nullable', 'string'],
+            'currency' => ['nullable', 'string', 'max:3'],
         ]);
 
         // Set defaults if not provided
