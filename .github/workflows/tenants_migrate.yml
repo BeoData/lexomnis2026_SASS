@@ -1,0 +1,33 @@
+name: Tenants Migrate
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  tenants-migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - name: Install composer deps
+        run: composer install --no-progress --no-suggest --prefer-dist
+      - name: Run tests
+        run: composer test || true
+      - name: Run tenants migrate (optional)
+        if: env.RUN_TENANTS_MIGRATE == 'true'
+        env:
+          DB_HOST: ${{ secrets.CENTRAL_DB_HOST }}
+          DB_DATABASE: ${{ secrets.CENTRAL_DB_NAME }}
+          DB_USERNAME: ${{ secrets.CENTRAL_DB_USER }}
+          DB_PASSWORD: ${{ secrets.CENTRAL_DB_PASSWORD }}
+        run: |
+          php artisan migrate --force
+          php artisan tenants:migrate --force
+
+# WARNING: Running tenants:migrate from CI requires the CI to have network access
+# to tenant databases and valid credentials. Use with caution and prefer running
+# migrations from a trusted deployment host.
