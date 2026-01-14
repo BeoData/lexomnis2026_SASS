@@ -29,6 +29,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{id}', [App\Http\Controllers\Admin\TenantController::class, 'show'])->name('show');
         Route::get('/{id}/edit', [App\Http\Controllers\Admin\TenantController::class, 'edit'])->name('edit');
         Route::put('/{id}', [App\Http\Controllers\Admin\TenantController::class, 'update'])->name('update');
+        Route::delete('/{id}', [App\Http\Controllers\Admin\TenantController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/suspend', [App\Http\Controllers\Admin\TenantController::class, 'suspend'])->name('suspend');
         Route::post('/{id}/activate', [App\Http\Controllers\Admin\TenantController::class, 'activate'])->name('activate');
     });

@@ -153,6 +153,23 @@
                 </div>
             </form>
         </div>
+
+        <div class="bg-white shadow rounded-lg p-6 mt-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Danger Zone</h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Once you delete this tenant, there is no going back. Please be certain.
+            </p>
+            <form method="POST" action="{{ route('tenants.destroy', $tenant['id']) }}" onsubmit="return confirm('Are you sure you want to delete this tenant? This action cannot be undone.')">
+                @csrf
+                @method('DELETE')
+                <button
+                    type="submit"
+                    class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded"
+                >
+                    Delete Tenant
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 @endsection

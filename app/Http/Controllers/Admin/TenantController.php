@@ -142,4 +142,16 @@ class TenantController extends Controller
 
         return back()->with('success', 'Tenant activated successfully');
     }
+
+    public function destroy(string $id)
+    {
+        $response = $this->apiService->deleteTenant((int) $id);
+
+        if (!$response['success']) {
+            return back()->withErrors(['error' => $response['error'] ?? 'Failed to delete tenant']);
+        }
+
+        return redirect()->route('tenants.index')
+            ->with('success', 'Tenant deleted successfully');
+    }
 }
