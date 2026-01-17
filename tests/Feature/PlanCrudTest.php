@@ -46,7 +46,8 @@ class PlanCrudTest extends TestCase
             ->get('/plans');
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => $page->component('Plans/Index'));
+        $response->assertViewIs('admin.plans.index');
+        $response->assertViewHas('plans');
     }
 
     public function test_it_can_display_create_plan_page()
@@ -55,7 +56,7 @@ class PlanCrudTest extends TestCase
             ->get('/plans/create');
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => $page->component('Plans/Create'));
+        $response->assertViewIs('admin.plans.create');
     }
 
     public function test_it_can_create_a_new_plan()
@@ -126,10 +127,8 @@ class PlanCrudTest extends TestCase
             ->get("/plans/{$planId}");
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => 
-            $page->component('Plans/Show')
-                ->has('plan')
-        );
+        $response->assertViewIs('admin.plans.show');
+        $response->assertViewHas('plan');
     }
 
     public function test_it_can_display_edit_plan_page()
@@ -151,10 +150,8 @@ class PlanCrudTest extends TestCase
             ->get("/plans/{$planId}/edit");
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => 
-            $page->component('Plans/Edit')
-                ->has('plan')
-        );
+        $response->assertViewIs('admin.plans.edit');
+        $response->assertViewHas('plan');
     }
 
     public function test_it_can_update_plan()

@@ -47,7 +47,8 @@ class SubscriptionCrudTest extends TestCase
             ->get('/subscriptions');
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => $page->component('Subscriptions/Index'));
+        $response->assertViewIs('admin.subscriptions.index');
+        $response->assertViewHas('subscriptions');
     }
 
     public function test_it_can_display_subscription_details()
@@ -70,10 +71,8 @@ class SubscriptionCrudTest extends TestCase
             ->get("/subscriptions/{$subscriptionId}");
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => 
-            $page->component('Subscriptions/Show')
-                ->has('subscription')
-        );
+        $response->assertViewIs('admin.subscriptions.show');
+        $response->assertViewHas('subscription');
     }
 
     public function test_it_handles_api_errors_gracefully()

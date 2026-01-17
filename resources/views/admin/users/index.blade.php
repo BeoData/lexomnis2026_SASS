@@ -10,6 +10,17 @@
         <!-- Filters -->
         <div class="bg-white p-4 rounded-lg shadow mb-6">
             <form method="GET" action="{{ route('users.index') }}" class="flex gap-4">
+                <select
+                    name="tenant_id"
+                    class="border border-gray-300 rounded-md px-3 py-2"
+                >
+                    <option value="">Select Tenant</option>
+                    @foreach($tenants as $tenant)
+                        <option value="{{ $tenant['id'] }}" {{ (request('tenant_id') == $tenant['id']) ? 'selected' : '' }}>
+                            {{ $tenant['name'] ?? $tenant['slug'] ?? ('Tenant #' . $tenant['id']) }}
+                        </option>
+                    @endforeach
+                </select>
                 <input
                     type="text"
                     name="search"
@@ -43,7 +54,7 @@
                         <div class="block hover:bg-gray-50 px-4 py-4 sm:px-6">
                             <div class="flex items-center justify-between">
                                 <div class="flex-1">
-                                    <a href="{{ route('users.show', $user['id']) }}" class="block">
+                                    <a href="{{ route('users.show', $user['id'], ['tenant_id' => request('tenant_id')]) }}" class="block">
                                         <div class="text-sm font-medium text-gray-900">
                                             {{ $user['name'] ?? 'N/A' }}
                                         </div>
@@ -56,8 +67,9 @@
                                     </a>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <form method="POST" action="{{ route('users.impersonate', $user['id']) }}" class="inline" onsubmit="return confirm('Are you sure you want to impersonate this user? You will be redirected to the tenant application.');">
+                                    <form method="POST" action="{{ route('users.impersonate', $user['id'], ['tenant_id' => request('tenant_id')]) }}" class="inline" onsubmit="return confirm('Are you sure you want to impersonate this user? You will be redirected to the tenant application.');">
                                         @csrf
+                                        <input type="hidden" name="tenant_id" value="{{ request('tenant_id') }}">
                                         <button type="submit" class="text-blue-600 hover:text-blue-900 text-sm">
                                             Impersonate
                                         </button>
@@ -68,7 +80,9 @@
                     </li>
                 @empty
                     <li class="px-4 py-4 sm:px-6">
-                        <div class="text-center text-gray-500">No users found</div>
+                        <div class="text-center text-gray-500">
+                            {{ request('tenant_id') ? 'No users found' : 'Select a tenant to view users' }}
+                        </div>
                     </li>
                 @endforelse
             </ul>

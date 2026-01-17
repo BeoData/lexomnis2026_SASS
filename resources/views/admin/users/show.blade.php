@@ -7,7 +7,7 @@
     <div class="px-4 py-6 sm:px-0">
         <div class="mb-6">
             <a
-                href="{{ route('users.index') }}"
+                href="{{ route('users.index', ['tenant_id' => $tenant_id]) }}"
                 class="text-blue-600 hover:text-blue-800 text-sm"
             >
                 ← Back to Users
@@ -17,21 +17,24 @@
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-3xl font-bold text-gray-900">{{ $user['name'] ?? 'N/A' }}</h1>
             <div class="flex space-x-2">
-                <form method="POST" action="{{ route('users.impersonate', $user['id']) }}" class="inline" onsubmit="return confirm('Are you sure you want to impersonate this user? You will be redirected to the tenant application.');">
+                <form method="POST" action="{{ route('users.impersonate', $user['id'], ['tenant_id' => $tenant_id]) }}" class="inline" onsubmit="return confirm('Are you sure you want to impersonate this user? You will be redirected to the tenant application.');">
                     @csrf
+                    <input type="hidden" name="tenant_id" value="{{ $tenant_id }}">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded">
                         Impersonate
                     </button>
                 </form>
-                <form method="POST" action="{{ route('users.reset-password', $user['id']) }}" class="inline" onsubmit="return confirm('Are you sure you want to reset this user\'s password?');">
+                <form method="POST" action="{{ route('users.reset-password', $user['id'], ['tenant_id' => $tenant_id]) }}" class="inline" onsubmit="return confirm('Are you sure you want to reset this user\'s password?');">
                     @csrf
+                    <input type="hidden" name="tenant_id" value="{{ $tenant_id }}">
                     <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded">
                         Reset Password
                     </button>
                 </form>
                 @if(($user['status'] ?? 'active') === 'active')
-                    <form method="POST" action="{{ route('users.suspend', $user['id']) }}" class="inline" onsubmit="return confirm('Are you sure you want to suspend this user?');">
+                    <form method="POST" action="{{ route('users.suspend', $user['id'], ['tenant_id' => $tenant_id]) }}" class="inline" onsubmit="return confirm('Are you sure you want to suspend this user?');">
                         @csrf
+                        <input type="hidden" name="tenant_id" value="{{ $tenant_id }}">
                         <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded">
                             Suspend
                         </button>

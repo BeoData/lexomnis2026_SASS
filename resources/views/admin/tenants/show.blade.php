@@ -83,6 +83,15 @@
                     <dd class="mt-1 text-sm text-gray-900">{{ $tenant['slug'] ?? 'N/A' }}</dd>
                 </div>
                 <div>
+                    <dt class="text-sm font-medium text-gray-500">Database</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {{ $tenant['db_name'] ?? 'N/A' }}
+                        @if(!empty($tenant['db_driver']))
+                            ({{ $tenant['db_driver'] }})
+                        @endif
+                    </dd>
+                </div>
+                <div>
                     <dt class="text-sm font-medium text-gray-500">Created At</dt>
                     <dd class="mt-1 text-sm text-gray-900">
                         {{ isset($tenant['created_at']) ? \Carbon\Carbon::parse($tenant['created_at'])->format('M d, Y h:i A') : 'N/A' }}

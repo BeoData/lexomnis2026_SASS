@@ -184,35 +184,46 @@ class TenantAppApiService
         return $this->request('GET', 'users', $filters);
     }
 
-    public function getUser(int $id): array
+    public function getUser(int $id, ?int $tenantId = null): array
     {
-        return $this->request('GET', "users/{$id}");
+        $payload = $tenantId ? ['tenant_id' => $tenantId] : [];
+        return $this->request('GET', "users/{$id}", $payload);
     }
 
-    public function updateUser(int $id, array $data): array
+    public function updateUser(int $id, array $data, ?int $tenantId = null): array
     {
+        if ($tenantId) {
+            $data['tenant_id'] = $tenantId;
+        }
         return $this->request('PUT', "users/{$id}", $data);
     }
 
-    public function suspendUser(int $id): array
+    public function suspendUser(int $id, ?int $tenantId = null): array
     {
-        return $this->request('POST', "users/{$id}/suspend");
+        $payload = $tenantId ? ['tenant_id' => $tenantId] : [];
+        return $this->request('POST', "users/{$id}/suspend", $payload);
     }
 
-    public function forceLogoutUser(int $id): array
+    public function forceLogoutUser(int $id, ?int $tenantId = null): array
     {
-        return $this->request('POST', "users/{$id}/force-logout");
+        $payload = $tenantId ? ['tenant_id' => $tenantId] : [];
+        return $this->request('POST', "users/{$id}/force-logout", $payload);
     }
 
-    public function resetUserPassword(int $id): array
+    public function resetUserPassword(int $id, ?int $tenantId = null): array
     {
-        return $this->request('POST', "users/{$id}/reset-password");
+        $payload = $tenantId ? ['tenant_id' => $tenantId] : [];
+        return $this->request('POST', "users/{$id}/reset-password", $payload);
     }
 
     // Impersonation
-    public function generateImpersonationToken(int $userId, bool $readOnly = false): array
+    public function generateImpersonationToken(int $userId, bool $readOnly = false, ?int $tenantId = null): array
     {
-        return $this->request('POST', "users/{$userId}/impersonate", ['read_only' => $readOnly]);
+        $payload = ['read_only' => $readOnly];
+        if ($tenantId) {
+            $payload['tenant_id'] = $tenantId;
+        }
+        return $this->request('POST', "users/{$userId}/impersonate", $payload);
     }
 
     // Subscriptions
