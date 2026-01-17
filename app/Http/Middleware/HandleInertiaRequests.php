@@ -35,15 +35,48 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        // Get the authenticated user directly from the guard
+        // This ensures we always get the current user, not a cached one
+        $user = auth()->user();
+        
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
                 ] : null,
             ],
         ];
+    }
+
+    /**
+     * Set the root template that's loaded on the first page visit.
+     *
+     * @see https://inertiajs.com/server-side-setup#root-template
+     */
+    public function rootView(Request $request): string
+    {
+        return $this->rootView;
+    }
+
+    /**
+     * Handle Inertia requests.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return \Illuminate\Http\Response
+     */
+    public function handle(Request $request, \Closure $next)
+    {
+        $response = parent::handle($request, $next);
+        
+        // Add CSRF token to response headers for auto-refresh
+        if ($request->hasSession()) {
+            $response->headers->set('X-CSRF-TOKEN', $request->session()->token());
+        }
+        
+        return $response;
     }
 }

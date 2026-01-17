@@ -31,7 +31,14 @@ class LoginController extends Controller
         ]);
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            // Regenerate session to prevent session fixation attacks
             $request->session()->regenerate();
+            
+            // Ensure we have the correct user after login
+            $user = Auth::user();
+            
+            // Clear any cached user data
+            Auth::setUser($user);
 
             return redirect()->intended(route('dashboard'));
         }
