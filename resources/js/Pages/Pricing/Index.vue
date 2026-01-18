@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -190,34 +190,6 @@ const props = defineProps({
         default: () => [],
     },
 });
-
-// #region agent log
-onMounted(() => {
-    fetch('http://127.0.0.1:7243/ingest/f682ccf0-1d06-484d-8630-0b075e837a08', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            location: 'Pricing/Index.vue:onMounted',
-            message: 'Pricing component mounted',
-            data: {
-                grouped_plans_count: props.groupedPlans?.length ?? 0,
-                grouped_plans_type: typeof props.groupedPlans,
-                grouped_plans_is_array: Array.isArray(props.groupedPlans),
-                grouped_plans_sample: props.groupedPlans && props.groupedPlans.length > 0 ? {
-                    plan_key: props.groupedPlans[0]?.plan_key,
-                    name: props.groupedPlans[0]?.name,
-                    has_monthly: !!props.groupedPlans[0]?.monthly,
-                    has_yearly: !!props.groupedPlans[0]?.yearly,
-                } : null,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'A'
-        })
-    }).catch(() => {});
-});
-// #endregion
 
 const billingPeriod = ref('monthly');
 
