@@ -26,6 +26,13 @@
                         <textarea id="description" name="description" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">{{ old('description') }}</textarea>
                     </div>
 
+                    <div>
+                        <label for="plan_key" class="block text-sm font-medium text-gray-700">Plan Key *</label>
+                        <input id="plan_key" name="plan_key" type="text" required value="{{ old('plan_key') }}" placeholder="easystart, essentials, advanced, expand" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('plan_key') border-red-300 @enderror" />
+                        <p class="mt-1 text-xs text-gray-500">Unique key for grouping monthly/yearly plans (e.g., "easystart", "essentials")</p>
+                        @error('plan_key')<div class="mt-1 text-sm text-red-600">{{ $message }}</div>@enderror
+                    </div>
+
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label for="price" class="block text-sm font-medium text-gray-700">Price *</label>
@@ -46,6 +53,14 @@
                             <input name="is_active" type="checkbox" value="1" {{ old('is_active', true) ? 'checked' : '' }} class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
                             <span class="ml-2 text-sm text-gray-700">Active</span>
                         </label>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center">
+                            <input name="is_visible_to_customers" type="checkbox" value="1" {{ old('is_visible_to_customers', true) ? 'checked' : '' }} class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                            <span class="ml-2 text-sm text-gray-700">Visible to Customers</span>
+                        </label>
+                        <p class="mt-1 text-xs text-gray-500">Uncheck to make this plan visible only to administrators (e.g., Trial plans)</p>
                     </div>
                 </div>
 

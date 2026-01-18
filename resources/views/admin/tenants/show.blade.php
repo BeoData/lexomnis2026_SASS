@@ -99,6 +99,77 @@
                 </div>
             </dl>
         </div>
+
+        <!-- Subscription Plan Section -->
+        <div class="bg-white shadow rounded-lg p-6 mt-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Subscription Plan</h2>
+            
+            @if(!empty($tenant['subscription']) && !empty($tenant['subscription']['plan']))
+                <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Plan Name</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-semibold">
+                            {{ $tenant['subscription']['plan']['name'] ?? 'N/A' }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Price</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            ${{ number_format($tenant['subscription']['plan']['price'] ?? 0, 2) }} / 
+                            {{ ($tenant['subscription']['plan']['billing_period'] ?? 'monthly') === 'monthly' ? 'month' : 'year' }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Subscription Status</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {{ ($tenant['subscription']['status'] ?? '') === 'active' ? 'bg-green-100 text-green-800' : '' }}
+                                    {{ ($tenant['subscription']['status'] ?? '') === 'trial' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                    {{ ($tenant['subscription']['status'] ?? '') === 'suspended' ? 'bg-red-100 text-red-800' : '' }}
+                                "
+                            >
+                                {{ $tenant['subscription']['status'] ?? 'N/A' }}
+                            </span>
+                        </dd>
+                    </div>
+                    @if(!empty($tenant['subscription']['trial_ends_at']))
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Trial Ends At</dt>
+                            <dd class="mt-1 text-sm text-gray-900">
+                                {{ \Carbon\Carbon::parse($tenant['subscription']['trial_ends_at'])->format('M d, Y h:i A') }}
+                            </dd>
+                        </div>
+                    @endif
+                    @if(!empty($tenant['subscription']['ends_at']))
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Subscription Ends At</dt>
+                            <dd class="mt-1 text-sm text-gray-900">
+                                {{ \Carbon\Carbon::parse($tenant['subscription']['ends_at'])->format('M d, Y h:i A') }}
+                            </dd>
+                        </div>
+                    @endif
+                </dl>
+            @else
+                <div class="text-center py-8">
+                    <p class="text-gray-600 mb-4">This tenant doesn't have an active subscription plan.</p>
+                    @if(!empty($plans))
+                        <form method="POST" action="{{ route('tenants.update', $tenant['id']) }}" class="inline">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="plan_id" value="{{ $plans[0]['id'] ?? '' }}">
+                            <input type="hidden" name="billing_period" value="monthly">
+                            <button
+                                type="submit"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+                            >
+                                Assign Plan
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            @endif
+        </div>
     </div>
 </div>
 @endsection

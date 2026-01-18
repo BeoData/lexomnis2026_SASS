@@ -77,6 +77,7 @@ class PlanCrudTest extends TestCase
             'description' => 'A new plan',
             'price' => 49.99,
             'billing_cycle' => 'monthly',
+            'plan_key' => 'new-plan',
             'currency' => 'USD',
             'is_active' => true,
         ];
@@ -93,7 +94,7 @@ class PlanCrudTest extends TestCase
         $response = $this->actingAs($this->user)
             ->post('/plans', []);
 
-        $response->assertSessionHasErrors(['name', 'price', 'billing_cycle']);
+        $response->assertSessionHasErrors(['name', 'price', 'billing_cycle', 'plan_key']);
     }
 
     public function test_it_validates_price_is_numeric_when_creating_plan()
@@ -103,6 +104,7 @@ class PlanCrudTest extends TestCase
                 'name' => 'Test Plan',
                 'price' => 'invalid',
                 'billing_cycle' => 'monthly',
+                'plan_key' => 'test-plan',
             ]);
 
         $response->assertSessionHasErrors(['price']);
@@ -173,6 +175,7 @@ class PlanCrudTest extends TestCase
             'name' => 'Updated Plan',
             'price' => 59.99,
             'billing_cycle' => 'yearly',
+            'plan_key' => 'updated-plan',
         ];
 
         $response = $this->actingAs($this->user)
@@ -196,6 +199,7 @@ class PlanCrudTest extends TestCase
                 'name' => 'Test Plan',
                 'price' => 29.99,
                 'billing_cycle' => 'monthly',
+                'plan_key' => 'test-plan',
             ]);
 
         $response->assertSessionHasErrors(['error']);

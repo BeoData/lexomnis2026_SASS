@@ -36,6 +36,18 @@
                         $getSetting = function($key) use ($apiSettings) {
                             return $apiSettings->firstWhere('key', $key);
                         };
+                        $getSettingId = function($setting) {
+                            if (!$setting) return 'new';
+                            return is_object($setting) ? $setting->id : (is_array($setting) ? ($setting['id'] ?? 'new') : 'new');
+                        };
+                        $getSettingValue = function($setting) {
+                            if (!$setting) return '';
+                            return is_object($setting) ? ($setting->value ?? '') : (is_array($setting) ? ($setting['value'] ?? '') : '');
+                        };
+                        $getSettingDescription = function($setting) {
+                            if (!$setting) return '';
+                            return is_object($setting) ? ($setting->description ?? '') : (is_array($setting) ? ($setting['description'] ?? '') : '');
+                        };
                     @endphp
 
                     <div>
@@ -45,14 +57,14 @@
                         @php $urlSetting = $getSetting('tenant_app_url'); @endphp
                         <input
                             id="tenant_app_url"
-                            name="settings[{{ $urlSetting->id ?? 'new' }}][key]"
+                            name="settings[{{ $getSettingId($urlSetting) }}][key]"
                             type="hidden"
                             value="tenant_app_url"
                         />
                         <input
-                            name="settings[{{ $urlSetting->id ?? 'new' }}][value]"
+                            name="settings[{{ $getSettingId($urlSetting) }}][value]"
                             type="url"
-                            value="{{ old('settings.'.$urlSetting->id.'.value', $urlSetting->value ?? '') }}"
+                            value="{{ old('settings.'.$getSettingId($urlSetting).'.value', $getSettingValue($urlSetting)) }}"
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('settings.*.value') border-red-300 @enderror"
                             placeholder="http://localhost:8000"
                         />
@@ -60,7 +72,7 @@
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
                         @if($urlSetting)
-                            <p class="mt-1 text-xs text-gray-500">{{ $urlSetting->description ?? '' }}</p>
+                            <p class="mt-1 text-xs text-gray-500">{{ $getSettingDescription($urlSetting) }}</p>
                         @endif
                     </div>
 
@@ -71,16 +83,16 @@
                         @php $tokenSetting = $getSetting('tenant_app_api_token'); @endphp
                         <input
                             id="tenant_app_api_token"
-                            name="settings[{{ $tokenSetting->id ?? 'new' }}][key]"
+                            name="settings[{{ $getSettingId($tokenSetting) }}][key]"
                             type="hidden"
                             value="tenant_app_api_token"
                         />
                         <div class="flex gap-2">
                             <input
                                 id="api_token_input"
-                                name="settings[{{ $tokenSetting->id ?? 'new' }}][value]"
+                                name="settings[{{ $getSettingId($tokenSetting) }}][value]"
                                 type="password"
-                                value="{{ old('settings.'.$tokenSetting->id.'.value', $tokenSetting->value ?? '') }}"
+                                value="{{ old('settings.'.$getSettingId($tokenSetting).'.value', $getSettingValue($tokenSetting)) }}"
                                 class="flex-1 mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('settings.*.value') border-red-300 @enderror"
                                 placeholder="Enter API token"
                                 required
@@ -97,7 +109,7 @@
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
                         @if($tokenSetting)
-                            <p class="mt-1 text-xs text-gray-500">{{ $tokenSetting->description ?? '' }}</p>
+                            <p class="mt-1 text-xs text-gray-500">{{ $getSettingDescription($tokenSetting) }}</p>
                         @endif
                     </div>
 
@@ -109,19 +121,19 @@
                             @php $timeoutSetting = $getSetting('tenant_app_timeout'); @endphp
                             <input
                                 type="hidden"
-                                name="settings[{{ $timeoutSetting->id ?? 'new' }}][key]"
+                                name="settings[{{ $getSettingId($timeoutSetting) }}][key]"
                                 value="tenant_app_timeout"
                             />
                             <input
                                 id="tenant_app_timeout"
-                                name="settings[{{ $timeoutSetting->id ?? 'new' }}][value]"
+                                name="settings[{{ $getSettingId($timeoutSetting) }}][value]"
                                 type="number"
                                 min="1"
-                                value="{{ old('settings.'.$timeoutSetting->id.'.value', $timeoutSetting->value ?? '') }}"
+                                value="{{ old('settings.'.$getSettingId($timeoutSetting).'.value', $getSettingValue($timeoutSetting)) }}"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             />
                             @if($timeoutSetting)
-                                <p class="mt-1 text-xs text-gray-500">{{ $timeoutSetting->description ?? '' }}</p>
+                                <p class="mt-1 text-xs text-gray-500">{{ $getSettingDescription($timeoutSetting) }}</p>
                             @endif
                         </div>
 
@@ -132,20 +144,20 @@
                             @php $retrySetting = $getSetting('tenant_app_retry_attempts'); @endphp
                             <input
                                 type="hidden"
-                                name="settings[{{ $retrySetting->id ?? 'new' }}][key]"
+                                name="settings[{{ $getSettingId($retrySetting) }}][key]"
                                 value="tenant_app_retry_attempts"
                             />
                             <input
                                 id="tenant_app_retry_attempts"
-                                name="settings[{{ $retrySetting->id ?? 'new' }}][value]"
+                                name="settings[{{ $getSettingId($retrySetting) }}][value]"
                                 type="number"
                                 min="0"
                                 max="10"
-                                value="{{ old('settings.'.$retrySetting->id.'.value', $retrySetting->value ?? '') }}"
+                                value="{{ old('settings.'.$getSettingId($retrySetting).'.value', $getSettingValue($retrySetting)) }}"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             />
                             @if($retrySetting)
-                                <p class="mt-1 text-xs text-gray-500">{{ $retrySetting->description ?? '' }}</p>
+                                <p class="mt-1 text-xs text-gray-500">{{ $getSettingDescription($retrySetting) }}</p>
                             @endif
                         </div>
                     </div>
@@ -162,6 +174,18 @@
                         $getGeneralSetting = function($key) use ($generalSettings) {
                             return $generalSettings->firstWhere('key', $key);
                         };
+                        $getGeneralSettingId = function($setting) {
+                            if (!$setting) return 'new';
+                            return is_object($setting) ? $setting->id : (is_array($setting) ? ($setting['id'] ?? 'new') : 'new');
+                        };
+                        $getGeneralSettingValue = function($setting) {
+                            if (!$setting) return '';
+                            return is_object($setting) ? ($setting->value ?? '') : (is_array($setting) ? ($setting['value'] ?? '') : '');
+                        };
+                        $getGeneralSettingDescription = function($setting) {
+                            if (!$setting) return '';
+                            return is_object($setting) ? ($setting->description ?? '') : (is_array($setting) ? ($setting['description'] ?? '') : '');
+                        };
                     @endphp
 
                     <div>
@@ -171,18 +195,18 @@
                         @php $appNameSetting = $getGeneralSetting('app_name'); @endphp
                         <input
                             type="hidden"
-                            name="settings[{{ $appNameSetting->id ?? 'new' }}][key]"
+                            name="settings[{{ $getGeneralSettingId($appNameSetting) }}][key]"
                             value="app_name"
                         />
                         <input
                             id="app_name"
-                            name="settings[{{ $appNameSetting->id ?? 'new' }}][value]"
+                            name="settings[{{ $getGeneralSettingId($appNameSetting) }}][value]"
                             type="text"
-                            value="{{ old('settings.'.$appNameSetting->id.'.value', $appNameSetting->value ?? '') }}"
+                            value="{{ old('settings.'.$getGeneralSettingId($appNameSetting).'.value', $getGeneralSettingValue($appNameSetting)) }}"
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                         @if($appNameSetting)
-                            <p class="mt-1 text-xs text-gray-500">{{ $appNameSetting->description ?? '' }}</p>
+                            <p class="mt-1 text-xs text-gray-500">{{ $getGeneralSettingDescription($appNameSetting) }}</p>
                         @endif
                     </div>
 
@@ -193,20 +217,20 @@
                         @php $itemsSetting = $getGeneralSetting('items_per_page'); @endphp
                         <input
                             type="hidden"
-                            name="settings[{{ $itemsSetting->id ?? 'new' }}][key]"
+                            name="settings[{{ $getGeneralSettingId($itemsSetting) }}][key]"
                             value="items_per_page"
                         />
                         <input
                             id="items_per_page"
-                            name="settings[{{ $itemsSetting->id ?? 'new' }}][value]"
+                            name="settings[{{ $getGeneralSettingId($itemsSetting) }}][value]"
                             type="number"
                             min="5"
                             max="100"
-                            value="{{ old('settings.'.$itemsSetting->id.'.value', $itemsSetting->value ?? '') }}"
+                            value="{{ old('settings.'.$getGeneralSettingId($itemsSetting).'.value', $getGeneralSettingValue($itemsSetting)) }}"
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                         @if($itemsSetting)
-                            <p class="mt-1 text-xs text-gray-500">{{ $itemsSetting->description ?? '' }}</p>
+                            <p class="mt-1 text-xs text-gray-500">{{ $getGeneralSettingDescription($itemsSetting) }}</p>
                         @endif
                     </div>
                 </div>

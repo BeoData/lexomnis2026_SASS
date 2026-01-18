@@ -149,7 +149,7 @@
                         </div>
                     </div>
                     <div class="flex items-center">
-                        <span class="text-sm text-gray-700 mr-4">{{ $page.props.auth.user?.name || $page.props.auth.user?.email }}</span>
+                        <span class="text-sm text-gray-700 mr-4">{{ $page.props.auth?.user?.name || $page.props.auth?.user?.email || 'Guest' }}</span>
                         <form @submit.prevent="logout" method="post">
                             <button
                                 type="submit"

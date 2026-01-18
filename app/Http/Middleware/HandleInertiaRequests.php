@@ -39,7 +39,7 @@ class HandleInertiaRequests extends Middleware
         // This ensures we always get the current user, not a cached one
         $user = auth()->user();
         
-        return [
+        $shared = [
             ...parent::share($request),
             'auth' => [
                 'user' => $user ? [
@@ -49,6 +49,13 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
         ];
+        
+        // Ensure auth is always set, even if null
+        if (!isset($shared['auth'])) {
+            $shared['auth'] = ['user' => null];
+        }
+        
+        return $shared;
     }
 
     /**

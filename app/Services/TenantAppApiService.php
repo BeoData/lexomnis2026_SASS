@@ -173,6 +173,15 @@ class TenantAppApiService
         return $this->request('POST', "tenants/{$id}/activate");
     }
 
+    public function assignPlanToTenant(int $id, int $planId, ?string $billingPeriod = null): array
+    {
+        $data = ['plan_id' => $planId];
+        if ($billingPeriod) {
+            $data['billing_period'] = $billingPeriod;
+        }
+        return $this->request('POST', "tenants/{$id}/assign-plan", $data);
+    }
+
     public function deleteTenant(int $id): array
     {
         return $this->request('DELETE', "tenants/{$id}");
@@ -266,6 +275,27 @@ class TenantAppApiService
     public function updatePlan(int $id, array $data): array
     {
         return $this->request('PUT', "plans/{$id}", $data);
+    }
+
+    // Manual Payment Management
+    public function getPendingManualPayments(array $filters = []): array
+    {
+        return $this->request('GET', 'payments/manual/pending', $filters);
+    }
+
+    public function approvePayment(int $id): array
+    {
+        return $this->request('POST', "payments/{$id}/approve");
+    }
+
+    public function rejectPayment(int $id, string $reason): array
+    {
+        return $this->request('POST', "payments/{$id}/reject", ['reason' => $reason]);
+    }
+
+    public function getPayment(int $id): array
+    {
+        return $this->request('GET', "payments/{$id}");
     }
 
     // Feature Flags

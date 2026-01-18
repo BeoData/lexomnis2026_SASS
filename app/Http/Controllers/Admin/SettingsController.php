@@ -13,26 +13,8 @@ class SettingsController extends Controller
     public function index()
     {
         $groups = [
-            'api' => Setting::where('group', 'api')->get()->map(function ($setting) {
-                return [
-                    'id' => $setting->id,
-                    'key' => $setting->key,
-                    'value' => $setting->value,
-                    'type' => $setting->type,
-                    'description' => $setting->description,
-                    'is_encrypted' => $setting->is_encrypted,
-                ];
-            }),
-            'general' => Setting::where('group', 'general')->get()->map(function ($setting) {
-                return [
-                    'id' => $setting->id,
-                    'key' => $setting->key,
-                    'value' => $setting->value,
-                    'type' => $setting->type,
-                    'description' => $setting->description,
-                    'is_encrypted' => $setting->is_encrypted,
-                ];
-            }),
+            'api' => Setting::where('group', 'api')->get(),
+            'general' => Setting::where('group', 'general')->get(),
         ];
 
         // Check API connection status

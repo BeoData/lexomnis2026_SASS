@@ -190,6 +190,81 @@
             @yield('content')
         </main>
     </div>
+
+    <!-- Emergency overlay removal script -->
+    <script>
+        (function() {
+            function removeStuckOverlays() {
+                // Remove any fixed overlays that might be blocking interaction
+                const allElements = document.querySelectorAll('*');
+                allElements.forEach(el => {
+                    const style = window.getComputedStyle(el);
+                    const position = style.position;
+                    const zIndex = parseInt(style.zIndex) || 0;
+                    const display = style.display;
+                    
+                    // Check if element is a blocking overlay
+                    if (position === 'fixed' && zIndex >= 40 && display !== 'none') {
+                        const rect = el.getBoundingClientRect();
+                        // Check if it covers the entire viewport (likely an overlay)
+                        if (rect.width >= window.innerWidth * 0.9 && rect.height >= window.innerHeight * 0.9) {
+                            const bgColor = style.backgroundColor;
+                            const opacity = parseFloat(style.opacity) || 1;
+                            
+                            // If it's a semi-transparent overlay covering the screen
+                            if ((bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') || opacity < 1) {
+                                // Check if it has interactive content
+                                const hasContent = el.querySelector('button, a, input, select, textarea, [role="dialog"], [role="alertdialog"]');
+                                if (!hasContent) {
+                                    // No interactive content, likely a stuck overlay - remove it
+                                    el.style.display = 'none';
+                                    console.log('Removed stuck overlay:', el);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Remove any pointer-events: none that might block clicks
+                const blockedElements = document.querySelectorAll('*');
+                blockedElements.forEach(el => {
+                    const style = window.getComputedStyle(el);
+                    if (style.pointerEvents === 'none' && el !== document.body && el !== document.documentElement) {
+                        // Check if parent also has pointer-events: none
+                        const parent = el.parentElement;
+                        if (parent && window.getComputedStyle(parent).pointerEvents !== 'none') {
+                            el.style.pointerEvents = 'auto';
+                        }
+                    }
+                });
+            }
+
+            // Re-enable right-click if disabled
+            document.addEventListener('contextmenu', function(e) {
+                // Allow right-click everywhere
+                return true;
+            }, true);
+
+            // Run immediately
+            removeStuckOverlays();
+
+            // Run on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', removeStuckOverlays);
+            } else {
+                removeStuckOverlays();
+            }
+
+            // Run on page load
+            window.addEventListener('load', function() {
+                setTimeout(removeStuckOverlays, 500);
+                setTimeout(removeStuckOverlays, 2000);
+            });
+
+            // Run periodically to catch any overlays that appear later
+            setInterval(removeStuckOverlays, 5000);
+        })();
+    </script>
 </body>
 </html>
 

@@ -63,9 +63,12 @@ class PlanController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'billing_cycle' => 'required|in:monthly,yearly',
+            'plan_key' => 'required|string|max:255',
             'features' => 'nullable|array',
             'limits' => 'nullable|array',
             'is_active' => 'boolean',
+            'is_visible_to_customers' => 'boolean',
+            'metadata' => 'nullable|array',
         ]);
 
         // Map billing_cycle to billing_period for API
@@ -124,9 +127,12 @@ class PlanController extends Controller
             'description' => 'nullable|string',
             'price' => 'sometimes|numeric|min:0',
             'billing_cycle' => 'sometimes|in:monthly,yearly',
+            'plan_key' => 'sometimes|string|max:255',
             'features' => 'nullable|array',
             'limits' => 'nullable|array',
             'is_active' => 'boolean',
+            'is_visible_to_customers' => 'boolean',
+            'metadata' => 'nullable|array',
         ]);
 
         // Map billing_cycle to billing_period for API
