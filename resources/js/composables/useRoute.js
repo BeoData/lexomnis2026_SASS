@@ -6,6 +6,7 @@ export function useRoute() {
         
         // Fallback to direct URLs
         const routeMap = {
+            'home': '/',
             'dashboard': '/dashboard',
             'tenants.index': '/tenants',
             'tenants.create': '/tenants/create',

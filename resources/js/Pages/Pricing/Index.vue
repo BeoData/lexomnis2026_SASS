@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen bg-gray-50">
+    <PublicLayout>
         <!-- Hero Section -->
         <div class="bg-white border-b border-gray-200">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -15,7 +15,8 @@
         </div>
 
         <!-- Billing Toggle -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-gray-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div class="flex justify-center mb-12">
                 <div class="inline-flex rounded-lg border-2 border-gray-200 bg-white p-1 shadow-sm">
                     <button
@@ -148,6 +149,7 @@
                 </div>
             </div>
         </div>
+        </div>
 
         <!-- Additional Info Section -->
         <div class="bg-white border-t border-gray-200 mt-16">
@@ -177,12 +179,13 @@
                 </div>
             </div>
         </div>
-    </div>
+    </PublicLayout>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import PublicLayout from '@/Pages/Layouts/PublicLayout.vue';
 
 const props = defineProps({
     groupedPlans: {

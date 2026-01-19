@@ -2,8 +2,8 @@
     <PublicLayout>
         <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-bold text-gray-900 mb-2">Registrujte Vaš Tenant</h1>
-                <p class="text-lg text-gray-600">Kreirajte svoj nalog i počnite da koristite LexOmnis</p>
+                <h1 class="text-4xl font-bold text-gray-900 mb-2">Try LexOmnis for free</h1>
+                <p class="text-lg text-gray-600">Start a 7-day free trial of LexOmnis.</p>
             </div>
 
             <div class="max-w-4xl mx-auto">
@@ -13,20 +13,38 @@
                         <div class="mb-8">
                             <h2 class="text-2xl font-semibold text-gray-900 mb-6">Lični Podaci</h2>
                             <div class="grid grid-cols-1 gap-6">
-                                <div>
-                                    <label for="name" class="block text-sm font-medium text-gray-700">
-                                        Ime Tenanta *
-                                    </label>
-                                    <input
-                                        id="name"
-                                        v-model="form.name"
-                                        type="text"
-                                        required
-                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Unesite ime vašeg tenanta"
-                                    />
-                                    <div v-if="errors.name" class="mt-1 text-sm text-red-600">
-                                        {{ errors.name }}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="first_name" class="block text-sm font-medium text-gray-700">
+                                            Ime *
+                                        </label>
+                                        <input
+                                            id="first_name"
+                                            v-model="form.first_name"
+                                            type="text"
+                                            required
+                                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Unesite vaše ime"
+                                        />
+                                        <div v-if="errors.first_name" class="mt-1 text-sm text-red-600">
+                                            {{ errors.first_name }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="last_name" class="block text-sm font-medium text-gray-700">
+                                            Prezime *
+                                        </label>
+                                        <input
+                                            id="last_name"
+                                            v-model="form.last_name"
+                                            type="text"
+                                            required
+                                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Unesite vaše prezime"
+                                        />
+                                        <div v-if="errors.last_name" class="mt-1 text-sm text-red-600">
+                                            {{ errors.last_name }}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -39,6 +57,7 @@
                                         v-model="form.email"
                                         type="email"
                                         required
+                                        autocomplete="username"
                                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                         placeholder="vas@email.com"
                                     />
@@ -58,6 +77,7 @@
                                             type="password"
                                             required
                                             minlength="8"
+                                            autocomplete="new-password"
                                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                         />
                                         <p class="mt-1 text-xs text-gray-500">Minimum 8 karaktera</p>
@@ -75,6 +95,7 @@
                                             type="password"
                                             required
                                             minlength="8"
+                                            autocomplete="new-password"
                                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     </div>
@@ -249,6 +270,9 @@ import PublicLayout from '@/Pages/Layouts/PublicLayout.vue';
 import { useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import PlanCard from '@/Components/PlanCard.vue';
+import { useRoute } from '@/composables/useRoute';
+
+const { route } = useRoute();
 
 const props = defineProps({
     errors: {
@@ -268,7 +292,8 @@ const groupedPlans = ref(props.groupedPlans || []);
 const loadingPlans = ref(false);
 
 const form = useForm({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     password_confirmation: '',
@@ -301,7 +326,13 @@ const submit = () => {
         return;
     }
 
-    form.post(route('tenant.register.store'), {
+    // Combine first_name and last_name into name for backend
+    form.name = `${form.first_name} ${form.last_name}`.trim();
+
+    // Use route function directly - ensure it's called in the right scope
+    const targetRoute = route('tenant.register.store');
+    
+    form.post(targetRoute, {
         preserveScroll: true,
         onError: () => {
             // Errors are handled by Inertia
