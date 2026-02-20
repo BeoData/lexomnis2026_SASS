@@ -23,14 +23,14 @@ class TenantRegistrationController extends Controller
     {
         // Get plans from API
         $response = $this->apiService->getPlans(['is_active' => true]);
-        
+
         $plans = $response['success'] ? ($response['data'] ?? []) : [];
-        
+
         // If data is paginated, extract the data array
         if (is_array($plans) && isset($plans['data']) && is_array($plans['data'])) {
             $plans = $plans['data'];
         }
-        
+
         // Group plans by plan_key manually
         $groupedPlans = [];
         if (is_array($plans) && !empty($plans)) {
@@ -44,7 +44,7 @@ class TenantRegistrationController extends Controller
                     'metadata' => $first['metadata'] ?? [],
                 ];
             })->values()->toArray();
-            
+
             $groupedPlans = $grouped;
         }
 
@@ -58,10 +58,12 @@ class TenantRegistrationController extends Controller
      */
     public function store(Request $request)
     {
-        // #region agent log
-        file_put_contents('c:\var\LEXOMNIS PRO\.cursor\debug.log', json_encode(['id'=>'log_'.time().'_A','timestamp'=>time()*1000,'location'=>'TenantRegistrationController.php:59','message'=>'store() entry','data'=>['has_name'=>$request->has('name'),'has_first_name'=>$request->has('first_name'),'registration_type'=>$request->input('registration_type')],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-        // #endregion
-        
+        Log::debug('TenantRegistrationController: store() entry', [
+            'has_name' => $request->has('name'),
+            'has_first_name' => $request->has('first_name'),
+            'registration_type' => $request->input('registration_type')
+        ]);
+
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'], // Can be provided directly or constructed from first_name + last_name
             'first_name' => ['required_without:name', 'string', 'max:255'],
@@ -73,15 +75,16 @@ class TenantRegistrationController extends Controller
             'timezone' => ['nullable', 'string'],
             'currency' => ['nullable', 'string', 'max:3'],
             'registration_type' => ['required', 'in:trial,paid'],
-            'plan_id' => ['required_if:registration_type,paid', 'nullable', 'integer', 'exists:plans,id'],
+            'plan_id' => ['required_if:registration_type,paid', 'nullable', 'integer'],
             'billing_period' => ['required_if:registration_type,paid', 'nullable', 'in:monthly,yearly'],
             'trial_days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'payment_method' => ['required_if:registration_type,paid', 'nullable', 'in:stripe,paypal'],
         ]);
 
-        // #region agent log
-        file_put_contents('c:\var\LEXOMNIS PRO\.cursor\debug.log', json_encode(['id'=>'log_'.time().'_B','timestamp'=>time()*1000,'location'=>'TenantRegistrationController.php:77','message'=>'Validation passed','data'=>['email'=>$validated['email']??null,'registration_type'=>$validated['registration_type']??null],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'B'])."\n", FILE_APPEND);
-        // #endregion
+        Log::debug('TenantRegistrationController: Validation passed', [
+            'email' => $validated['email'] ?? null,
+            'registration_type' => $validated['registration_type'] ?? null
+        ]);
 
         // Combine first_name and last_name into name if not provided directly
         if (empty($validated['name']) && !empty($validated['first_name']) && !empty($validated['last_name'])) {
@@ -97,11 +100,13 @@ class TenantRegistrationController extends Controller
             // Call public API endpoint
             $baseUrl = config('services.tenant_app_api.base_url', env('TENANT_APP_API_URL', 'http://localhost:8000'));
             $apiToken = config('services.tenant_app_api.token', env('TENANT_APP_API_TOKEN', ''));
-            
-            // #region agent log
-            file_put_contents('c:\var\LEXOMNIS PRO\.cursor\debug.log', json_encode(['id'=>'log_'.time().'_A','timestamp'=>time()*1000,'location'=>'TenantRegistrationController.php:90','message'=>'Before API call','data'=>['baseUrl'=>$baseUrl,'apiUrl'=>"{$baseUrl}/api/public/tenants/register",'hasApiToken'=>!empty($apiToken)],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-            // #endregion
-            
+
+            Log::debug('TenantRegistrationController: Before API call', [
+                'baseUrl' => $baseUrl,
+                'apiUrl' => "{$baseUrl}/api/public/tenants/register",
+                'hasApiToken' => !empty($apiToken)
+            ]);
+
             $client = new \GuzzleHttp\Client();
             $response = $client->post("{$baseUrl}/api/public/tenants/register", [
                 'json' => $validated,
@@ -111,18 +116,21 @@ class TenantRegistrationController extends Controller
                 ],
             ]);
 
-            // #region agent log
             $statusCode = $response->getStatusCode();
             $responseBody = $response->getBody()->getContents();
             $response->getBody()->rewind();
-            file_put_contents('c:\var\LEXOMNIS PRO\.cursor\debug.log', json_encode(['id'=>'log_'.time().'_A','timestamp'=>time()*1000,'location'=>'TenantRegistrationController.php:102','message'=>'API response received','data'=>['statusCode'=>$statusCode,'responseBody'=>$responseBody],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-            // #endregion
+            Log::debug('TenantRegistrationController: API response received', [
+                'statusCode' => $statusCode,
+                'responseBody' => $responseBody
+            ]);
 
             $data = json_decode($responseBody, true);
 
-            // #region agent log
-            file_put_contents('c:\var\LEXOMNIS PRO\.cursor\debug.log', json_encode(['id'=>'log_'.time().'_A','timestamp'=>time()*1000,'location'=>'TenantRegistrationController.php:104','message'=>'Response parsed','data'=>['success'=>$data['success']??false,'hasError'=>isset($data['error']),'error'=>$data['error']??null],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-            // #endregion
+            Log::debug('TenantRegistrationController: Response parsed', [
+                'success' => $data['success'] ?? false,
+                'hasError' => isset($data['error']),
+                'error' => $data['error'] ?? null
+            ]);
 
             if ($data['success'] ?? false) {
                 if ($validated['registration_type'] === 'trial') {
@@ -146,11 +154,12 @@ class TenantRegistrationController extends Controller
         } catch (\GuzzleHttp\Exception\ClientException $e) {
             $response = $e->getResponse();
             $errorData = json_decode($response->getBody()->getContents(), true);
-            
-            // #region agent log
-            file_put_contents('c:\var\LEXOMNIS PRO\.cursor\debug.log', json_encode(['id'=>'log_'.time().'_A','timestamp'=>time()*1000,'location'=>'TenantRegistrationController.php:123','message'=>'ClientException caught','data'=>['statusCode'=>$response->getStatusCode(),'errorData'=>$errorData],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-            // #endregion
-            
+
+            Log::debug('TenantRegistrationController: ClientException caught', [
+                'statusCode' => $response->getStatusCode(),
+                'errorData' => $errorData
+            ]);
+
             Log::error('Tenant registration failed', [
                 'error' => $errorData,
                 'status' => $response->getStatusCode(),
@@ -160,10 +169,11 @@ class TenantRegistrationController extends Controller
                 'error' => $errorData['error'] ?? $errorData['message'] ?? 'Došlo je do greške prilikom registracije.',
             ])->withInput();
         } catch (\GuzzleHttp\Exception\RequestException $e) {
-            // #region agent log
-            file_put_contents('c:\var\LEXOMNIS PRO\.cursor\debug.log', json_encode(['id'=>'log_'.time().'_A','timestamp'=>time()*1000,'location'=>'TenantRegistrationController.php:135','message'=>'RequestException caught','data'=>['message'=>$e->getMessage(),'hasResponse'=>$e->hasResponse()],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A'])."\n", FILE_APPEND);
-            // #endregion
-            
+            Log::debug('TenantRegistrationController: RequestException caught', [
+                'message' => $e->getMessage(),
+                'hasResponse' => $e->hasResponse()
+            ]);
+
             Log::error('Tenant registration request exception', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -173,10 +183,11 @@ class TenantRegistrationController extends Controller
                 'error' => 'Došlo je do greške prilikom registracije. Molimo pokušajte ponovo.',
             ])->withInput();
         } catch (\Exception $e) {
-            // #region agent log
-            file_put_contents('c:\var\LEXOMNIS PRO\.cursor\debug.log', json_encode(['id'=>'log_'.time().'_E','timestamp'=>time()*1000,'location'=>'TenantRegistrationController.php:135','message'=>'General Exception caught','data'=>['message'=>$e->getMessage(),'class'=>get_class($e)],'sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'E'])."\n", FILE_APPEND);
-            // #endregion
-            
+            Log::debug('TenantRegistrationController: General Exception caught', [
+                'message' => $e->getMessage(),
+                'class' => get_class($e)
+            ]);
+
             Log::error('Tenant registration exception', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -195,7 +206,7 @@ class TenantRegistrationController extends Controller
     {
         try {
             $baseUrl = config('services.tenant_app_api.base_url', env('TENANT_APP_API_URL', 'http://localhost:8000'));
-            
+
             $client = new \GuzzleHttp\Client();
             $response = $client->post("{$baseUrl}/api/public/tenants/verify-email", [
                 'json' => ['token' => $token],
@@ -217,7 +228,7 @@ class TenantRegistrationController extends Controller
         } catch (\GuzzleHttp\Exception\ClientException $e) {
             $response = $e->getResponse();
             $errorData = json_decode($response->getBody()->getContents(), true);
-            
+
             Log::error('Email verification failed', [
                 'error' => $errorData,
                 'status' => $response->getStatusCode(),
@@ -246,7 +257,7 @@ class TenantRegistrationController extends Controller
 
         try {
             $baseUrl = config('services.tenant_app_api.base_url', env('TENANT_APP_API_URL', 'http://localhost:8000'));
-            
+
             $client = new \GuzzleHttp\Client();
             $response = $client->post("{$baseUrl}/api/public/tenants/resend-verification", [
                 'json' => $validated,
