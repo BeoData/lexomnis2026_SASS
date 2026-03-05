@@ -133,6 +133,7 @@ class SettingsController extends Controller
             $token = $validated['token'];
 
             $response = Http::timeout(10)
+                ->connectTimeout((int) config('services.tenant_app.connect_timeout', 2))
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $token,
                     'Accept' => 'application/json',
@@ -183,6 +184,7 @@ class SettingsController extends Controller
             $apiUrl = rtrim($url, '/') . '/api/admin/system/health';
 
             $response = Http::timeout(5)
+                ->connectTimeout((int) config('services.tenant_app.connect_timeout', 2))
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $token,
                     'Accept' => 'application/json',

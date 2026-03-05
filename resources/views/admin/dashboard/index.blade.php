@@ -131,17 +131,27 @@
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">System Status</h3>
                         <div class="flex items-center gap-4">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ ($stats['system']['status'] ?? '') === 'healthy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                            <span id="system-status-badge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ ($stats['system']['status'] ?? '') === 'healthy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                 {{ ($stats['system']['status'] ?? '') === 'healthy' ? '✓ Healthy' : '✗ Unhealthy' }}
                             </span>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ ($stats['system']['api_connected'] ?? false) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                            <span id="system-api-badge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ ($stats['system']['api_connected'] ?? false) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                 {{ ($stats['system']['api_connected'] ?? false) ? '✓ API Connected' : '✗ API Disconnected' }}
                             </span>
                         </div>
+                        <p id="system-status-message" class="mt-2 text-sm text-gray-500"></p>
                     </div>
-                    <a href="{{ route('system.index') }}" class="text-sm text-blue-600 hover:text-blue-800">
-                        View details →
-                    </a>
+                    <div class="flex items-center gap-3">
+                        <button
+                            type="button"
+                            id="system-test-connection-button"
+                            class="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                        >
+                            Test connection
+                        </button>
+                        <a href="{{ route('system.index') }}" class="text-sm text-blue-600 hover:text-blue-800">
+                            View details →
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -216,5 +226,59 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    (function () {
+        const btn = document.getElementById('system-test-connection-button');
+        if (!btn) return;
+
+        const msgEl = document.getElementById('system-status-message');
+        const statusBadge = document.getElementById('system-status-badge');
+        const apiBadge = document.getElementById('system-api-badge');
+
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            msgEl.className = 'mt-2 text-sm text-gray-500';
+            msgEl.textContent = 'Testing connection...';
+
+            fetch("{{ route('system.test-connection') }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+                .then(response => response.json().then(data => ({ ok: response.ok, status: response.status, data })))
+                .then(({ ok, data }) => {
+                    if (ok && data.success) {
+                        msgEl.className = 'mt-2 text-sm text-green-600';
+                        msgEl.textContent = data.message || 'API connection successful.';
+                        if (statusBadge) {
+                            statusBadge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+                            statusBadge.textContent = '✓ Healthy';
+                        }
+                        if (apiBadge) {
+                            apiBadge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+                            apiBadge.textContent = '✓ API Connected';
+                        }
+                    } else {
+                        msgEl.className = 'mt-2 text-sm text-red-600';
+                        msgEl.textContent = (data && data.message) ? data.message : 'API connection failed.';
+                    }
+                })
+                .catch(() => {
+                    msgEl.className = 'mt-2 text-sm text-red-600';
+                    msgEl.textContent = 'Error while testing API connection.';
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                });
+        });
+    })();
+</script>
+@endpush
 @endsection
 

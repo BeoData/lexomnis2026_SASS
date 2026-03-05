@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -11,25 +12,75 @@ class TenantAppApiService
     protected string $baseUrl;
     protected ?string $apiToken;
     protected int $timeout;
-    protected int $retryAttempts;
     protected int $connectTimeout;
+    protected int $retryAttempts;
+    protected int $retryDelayMs;
+    protected int $downTtlSeconds;
     protected int $dashboardTimeout;
 
     public function __construct()
     {
-        $this->baseUrl = config('services.tenant_app.url', 'http://localhost:8000');
-        $this->apiToken = config('services.tenant_app.api_token');
+        // Try to get from settings first, then fallback to config/env
+        try {
+            $this->baseUrl = \App\Models\Setting::get('tenant_app_url') 
+                ?: config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
+            
+            $this->apiToken = \App\Models\Setting::get('tenant_app_api_token') 
+                ?: config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
+            
+            $timeoutRaw = (int) (\App\Models\Setting::get('tenant_app_timeout') 
+                ?: config('services.tenant_app.timeout', 30));
+            $this->timeout = min((int) config('services.tenant_app.timeout_max_cap', 15), $timeoutRaw);
 
-        $timeoutRaw = (int) config('services.tenant_app.timeout', 30);
-        $this->timeout = min((int) config('services.tenant_app.timeout_max_cap', 15), $timeoutRaw);
+            $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 5);
+            
+            $this->retryAttempts = (int) (\App\Models\Setting::get('tenant_app_retry_attempts') 
+                ?: config('services.tenant_app.retry_attempts', 2));
 
-        $this->retryAttempts = (int) config('services.tenant_app.retry_attempts', 2);
+            $this->retryDelayMs = (int) config('services.tenant_app.retry_delay_ms', 250);
+            $this->downTtlSeconds = (int) config('services.tenant_app.down_ttl_seconds', 60);
+            
+            $this->dashboardTimeout = min(
+                (int) config('services.tenant_app.dashboard_timeout', 8),
+                $this->timeout
+            );
+        } catch (\Exception $e) {
+            // Fallback to config/env if settings table doesn't exist
+            $this->baseUrl = config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
+            $this->apiToken = config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
+            
+            $timeoutRaw = (int) config('services.tenant_app.timeout', 30);
+            $this->timeout = min((int) config('services.tenant_app.timeout_max_cap', 15), $timeoutRaw);
+            
+            $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 5);
+            $this->retryAttempts = (int) config('services.tenant_app.retry_attempts', 2);
+            $this->retryDelayMs = (int) config('services.tenant_app.retry_delay_ms', 250);
+            $this->downTtlSeconds = (int) config('services.tenant_app.down_ttl_seconds', 60);
+            $this->dashboardTimeout = min(
+                (int) config('services.tenant_app.dashboard_timeout', 8),
+                $this->timeout
+            );
+        }
+    }
 
-        $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 5);
-        $this->dashboardTimeout = min(
-            (int) config('services.tenant_app.dashboard_timeout', 8),
-            $this->timeout
-        );
+    protected function downCacheKey(): string
+    {
+        return 'tenant_app:down:' . md5((string) $this->baseUrl);
+    }
+
+    protected function markTenantAppDown(): void
+    {
+        // Circuit breaker: if the tenant app is down/timeouting, avoid blocking every request for a while.
+        if ($this->downTtlSeconds > 0) {
+            Cache::put($this->downCacheKey(), true, now()->addSeconds($this->downTtlSeconds));
+        }
+    }
+    protected function isTimeoutException(\Throwable $e): bool
+    {
+        $msg = $e->getMessage();
+        return str_contains($msg, 'cURL error 28')
+            || str_contains($msg, 'Operation timed out')
+            || str_contains($msg, 'timed out');
     }
 
     /**
@@ -37,6 +88,14 @@ class TenantAppApiService
      */
     protected function request(string $method, string $endpoint, array $data = [], array $headers = []): array
     {
+        if (Cache::has($this->downCacheKey())) {
+            return [
+                'success' => false,
+                'error' => 'Tenant App is unreachable (cached). Please try again shortly.',
+                'status' => 503,
+            ];
+        }
+
         if (!$this->apiToken) {
             return [
                 'success' => false,
@@ -69,8 +128,8 @@ class TenantAppApiService
                 ]);
 
                 $response = Http::connectTimeout($this->connectTimeout)
-                            ->timeout($this->timeout)
-                            ->withHeaders($headers)
+                    ->timeout($this->timeout)
+                    ->withHeaders($headers)
                     ->{strtolower($method)}($url, $data);
 
                 Log::info('TenantAppApiService response', [
@@ -99,7 +158,7 @@ class TenantAppApiService
                 // Retry on server errors
                 if ($response->serverError() && $attempt < $this->retryAttempts - 1) {
                     $attempt++;
-                    sleep(pow(2, $attempt)); // Exponential backoff
+                    usleep((int) ($this->retryDelayMs * 1000));
                     continue;
                 }
 
@@ -110,12 +169,30 @@ class TenantAppApiService
                     'data' => $response->json(),
                 ];
 
-            } catch (\Exception $e) {
+            } catch (ConnectionException $e) {
+                $lastException = $e;
+                $attempt++;
+                $this->markTenantAppDown();
+
+                // Don't retry timeouts: it just burns time and can hit PHP max_execution_time.
+                if ($this->isTimeoutException($e)) {
+                    break;
+                }
+
+                if ($attempt < $this->retryAttempts) {
+                    usleep((int) ($this->retryDelayMs * 1000));
+                }
+            } catch (\Throwable $e) {
                 $lastException = $e;
                 $attempt++;
 
+                if ($this->isTimeoutException($e)) {
+                    $this->markTenantAppDown();
+                    break;
+                }
+
                 if ($attempt < $this->retryAttempts) {
-                    sleep(pow(2, $attempt));
+                    usleep((int) ($this->retryDelayMs * 1000));
                 }
             }
         }

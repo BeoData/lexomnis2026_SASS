@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\TenantAppApiService;
+use Illuminate\Http\JsonResponse;
 
 class SystemController extends Controller
 {
@@ -53,5 +54,28 @@ class SystemController extends Controller
         return view('admin.system.metrics', [
             'metrics' => $response['data'] ?? [],
         ]);
+    }
+
+    /**
+     * Quick API connection test used from the dashboard "System Status" widget.
+     */
+    public function testConnection(): JsonResponse
+    {
+        $response = $this->apiService->getSystemHealth();
+
+        if ($response['success'] ?? false) {
+            return response()->json([
+                'success' => true,
+                'status' => $response['status'] ?? 200,
+                'message' => 'API connection successful.',
+                'data' => $response['data'] ?? null,
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'status' => $response['status'] ?? 500,
+            'message' => $response['error'] ?? 'API connection failed.',
+        ], $response['status'] ?? 500);
     }
 }

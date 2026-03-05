@@ -24,7 +24,7 @@ class SettingsSeeder extends Seeder
 
         Setting::set(
             'tenant_app_api_token',
-            env('TENANT_APP_API_TOKEN', ''),
+            env('TENANT_APP_API_TOKEN', '82230dc5542da7c9e0cc84239dfa78ec3daaf2ad0b2f0e110fd7049b42389353'),
             'string',
             'api',
             'API Token for Tenant App authentication (encrypted)',
@@ -33,7 +33,7 @@ class SettingsSeeder extends Seeder
 
         Setting::set(
             'tenant_app_timeout',
-            env('TENANT_APP_TIMEOUT', '30'),
+            env('TENANT_APP_TIMEOUT', '10'),
             'integer',
             'api',
             'API Request Timeout in seconds',
@@ -42,7 +42,7 @@ class SettingsSeeder extends Seeder
 
         Setting::set(
             'tenant_app_retry_attempts',
-            env('TENANT_APP_RETRY_ATTEMPTS', '3'),
+            env('TENANT_APP_RETRY_ATTEMPTS', '2'),
             'integer',
             'api',
             'Number of retry attempts for failed API requests',

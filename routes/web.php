@@ -69,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\SystemController::class, 'index'])->name('index');
         Route::get('/health', [App\Http\Controllers\Admin\SystemController::class, 'health'])->name('health');
         Route::get('/metrics', [App\Http\Controllers\Admin\SystemController::class, 'metrics'])->name('metrics');
+        Route::post('/test-connection', [App\Http\Controllers\Admin\SystemController::class, 'testConnection'])->name('test-connection');
     });
 
     // Settings

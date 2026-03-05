@@ -9,11 +9,13 @@ class SubscriptionApiService
 {
     protected string $baseUrl;
     protected int $timeout;
+    protected int $connectTimeout;
 
     public function __construct()
     {
         $this->baseUrl = config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
-        $this->timeout = config('services.tenant_app.timeout', 30);
+        $this->timeout = (int) config('services.tenant_app.timeout', 30);
+        $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 2);
     }
 
     /**
@@ -34,7 +36,8 @@ class SubscriptionApiService
         $headers = array_merge($defaultHeaders, $headers);
 
         try {
-            $response = Http::timeout($this->timeout)
+            $response = Http::connectTimeout($this->connectTimeout)
+                ->timeout($this->timeout)
                 ->withHeaders($headers)
                 ->{strtolower($method)}($url, $data);
 

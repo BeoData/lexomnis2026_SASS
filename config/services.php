@@ -44,6 +44,8 @@ return [
         'connect_timeout' => (int) env('TENANT_APP_CONNECT_TIMEOUT', 5),
         'dashboard_timeout' => (int) env('TENANT_APP_DASHBOARD_TIMEOUT', 8),
         'retry_attempts' => (int) env('TENANT_APP_RETRY_ATTEMPTS', 2),
+        'retry_delay_ms' => env('TENANT_APP_RETRY_DELAY_MS', 250),
+        'down_ttl_seconds' => env('TENANT_APP_DOWN_TTL_SECONDS', 60),
     ],
 
 ];
