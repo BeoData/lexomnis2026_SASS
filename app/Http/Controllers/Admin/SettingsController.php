@@ -49,12 +49,20 @@ class SettingsController extends Controller
         }
 
         foreach ($validated['settings'] as $settingData) {
-            $setting = Setting::where('key', $settingData['key'])->first();
-            
-            if ($setting) {
-                $setting->value = $settingData['value'] ?? '';
-                $setting->save();
-            }
+            $key = $settingData['key'];
+            $value = $settingData['value'] ?? '';
+
+            // Get existing setting to preserve group/type/etc if it exists
+            $existing = Setting::where('key', $key)->first();
+
+            Setting::set(
+                $key,
+                $value,
+                $existing->type ?? 'string',
+                $existing->group ?? 'general',
+                $existing->description ?? null,
+                $existing->is_encrypted ?? ($key === 'tenant_app_api_token')
+            );
         }
 
         // Clear config cache if API settings changed
@@ -77,19 +85,19 @@ class SettingsController extends Controller
     protected function updateEnvFile(array $settings)
     {
         $envPath = base_path('.env');
-        
+
         if (!file_exists($envPath)) {
             return;
         }
 
         $envContent = file_get_contents($envPath);
-        
+
         foreach ($settings as $setting) {
             $key = strtoupper($setting['key']);
             $value = $setting['value'] ?? '';
-            
+
             // Map setting keys to env keys
-            $envKey = match($setting['key']) {
+            $envKey = match ($setting['key']) {
                 'tenant_app_url' => 'TENANT_APP_URL',
                 'tenant_app_api_token' => 'TENANT_APP_API_TOKEN',
                 'tenant_app_timeout' => 'TENANT_APP_TIMEOUT',
@@ -161,8 +169,8 @@ class SettingsController extends Controller
     protected function checkApiConnection(): array
     {
         try {
-            $url = Setting::get('tenant_app_url');
-            $token = Setting::get('tenant_app_api_token');
+            $url = Setting::getByKey('tenant_app_url');
+            $token = Setting::getByKey('tenant_app_api_token');
 
             if (!$url || !$token) {
                 return [

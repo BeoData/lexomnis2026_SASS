@@ -12,34 +12,24 @@ class TenantAppApiService
     protected ?string $apiToken;
     protected int $timeout;
     protected int $retryAttempts;
+    protected int $connectTimeout;
+    protected int $dashboardTimeout;
 
     public function __construct()
     {
-        // Try to get from settings first, then fallback to config/env
-        // Use try-catch in case settings table doesn't exist yet
-        try {
-            $this->baseUrl = \App\Models\Setting::get('tenant_app_url') 
-                ?: config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
-            
-            $this->apiToken = \App\Models\Setting::get('tenant_app_api_token') 
-                ?: config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
-            
-            $this->timeout = (int) (\App\Models\Setting::get('tenant_app_timeout') 
-                ?: config('services.tenant_app.timeout', 30));
-            
-            $this->retryAttempts = (int) (\App\Models\Setting::get('tenant_app_retry_attempts') 
-                ?: config('services.tenant_app.retry_attempts', 3));
-        } catch (\Exception $e) {
-            // Fallback to config/env if settings table doesn't exist
-            $this->baseUrl = config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
-            $this->apiToken = config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
-            $this->timeout = config('services.tenant_app.timeout', 30);
-            $this->retryAttempts = config('services.tenant_app.retry_attempts', 3);
-        }
-        
-        if (!$this->apiToken) {
-            throw new \RuntimeException('TENANT_APP_API_TOKEN is not configured. Please set it in Settings or .env file.');
-        }
+        $this->baseUrl = config('services.tenant_app.url', 'http://localhost:8000');
+        $this->apiToken = config('services.tenant_app.api_token');
+
+        $timeoutRaw = (int) config('services.tenant_app.timeout', 30);
+        $this->timeout = min((int) config('services.tenant_app.timeout_max_cap', 15), $timeoutRaw);
+
+        $this->retryAttempts = (int) config('services.tenant_app.retry_attempts', 2);
+
+        $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 5);
+        $this->dashboardTimeout = min(
+            (int) config('services.tenant_app.dashboard_timeout', 8),
+            $this->timeout
+        );
     }
 
     /**
@@ -50,13 +40,14 @@ class TenantAppApiService
         if (!$this->apiToken) {
             return [
                 'success' => false,
-                'error' => 'API token is not configured. Please set TENANT_APP_API_TOKEN in your .env file.',
+                'error' => 'API token is not configured. Set it in Admin → Settings.',
                 'status' => 500,
             ];
         }
-        
-        $url = rtrim($this->baseUrl, '/') . '/api/admin/' . ltrim($endpoint, '/');
-        
+
+        $pathPrefix = rtrim(config('services.tenant_app.api_path_prefix', 'api/admin'), '/');
+        $url = rtrim($this->baseUrl, '/') . '/' . $pathPrefix . '/' . ltrim($endpoint, '/');
+
         $defaultHeaders = [
             'Authorization' => 'Bearer ' . $this->apiToken,
             'Accept' => 'application/json',
@@ -77,8 +68,9 @@ class TenantAppApiService
                     'attempt' => $attempt + 1,
                 ]);
 
-                $response = Http::timeout($this->timeout)
-                    ->withHeaders($headers)
+                $response = Http::connectTimeout($this->connectTimeout)
+                            ->timeout($this->timeout)
+                            ->withHeaders($headers)
                     ->{strtolower($method)}($url, $data);
 
                 Log::info('TenantAppApiService response', [
@@ -121,7 +113,7 @@ class TenantAppApiService
             } catch (\Exception $e) {
                 $lastException = $e;
                 $attempt++;
-                
+
                 if ($attempt < $this->retryAttempts) {
                     sleep(pow(2, $attempt));
                 }
@@ -233,6 +225,12 @@ class TenantAppApiService
             $payload['tenant_id'] = $tenantId;
         }
         return $this->request('POST', "users/{$userId}/impersonate", $payload);
+    }
+
+    public function generateTenantImpersonationToken(int $tenantId, bool $readOnly = false): array
+    {
+        $payload = ['read_only' => $readOnly];
+        return $this->request('POST', "tenants/{$tenantId}/impersonate", $payload);
     }
 
     // Subscriptions
@@ -359,6 +357,93 @@ class TenantAppApiService
     public function getAuditLog(int $id): array
     {
         return $this->request('GET', "audit-logs/{$id}");
+    }
+
+    /**
+     * Fetch all dashboard data in one parallel batch (max wait = one request timeout).
+     */
+    public function getDashboardData(): array
+    {
+        if (!$this->apiToken) {
+            return $this->emptyDashboardData();
+        }
+
+        $base = rtrim($this->baseUrl, '/') . '/' . ltrim(config('services.tenant_app.api_path_prefix', 'api/admin'), '/') . '/';
+        $headers = [
+            'Authorization' => 'Bearer ' . $this->apiToken,
+            'Accept' => 'application/json',
+        ];
+
+        try {
+            $responses = Http::connectTimeout($this->connectTimeout)
+                ->timeout($this->dashboardTimeout)
+                ->pool(fn(\Illuminate\Http\Client\Pool $pool) => [
+                    $pool->as('tenants')->withHeaders($headers)->get($base . 'tenants', ['per_page' => 1]),
+                    $pool->as('tenants_active')->withHeaders($headers)->get($base . 'tenants', ['status' => 'active', 'per_page' => 1]),
+                    $pool->as('tenants_suspended')->withHeaders($headers)->get($base . 'tenants', ['status' => 'suspended', 'per_page' => 1]),
+                    $pool->as('tenants_trial')->withHeaders($headers)->get($base . 'tenants', ['status' => 'trial', 'per_page' => 1]),
+                    $pool->as('users')->withHeaders($headers)->get($base . 'users', ['per_page' => 1]),
+                    $pool->as('subscriptions')->withHeaders($headers)->get($base . 'subscriptions', ['per_page' => 1]),
+                    $pool->as('subscriptions_active')->withHeaders($headers)->get($base . 'subscriptions', ['status' => 'active', 'per_page' => 1]),
+                    $pool->as('plans')->withHeaders($headers)->get($base . 'plans', ['per_page' => 1]),
+                    $pool->as('health')->withHeaders($headers)->get($base . 'system/health'),
+                    $pool->as('audit_logs')->withHeaders($headers)->get($base . 'audit-logs', ['per_page' => 10]),
+                ]);
+
+            $r = fn(string $key) => $responses[$key] ?? null;
+            $isResponse = fn($v) => $v instanceof \Illuminate\Http\Client\Response;
+            $json = fn($res) => $isResponse($res) && $res->successful() ? $res->json() : null;
+            $ok = fn($res) => $isResponse($res) && $res->successful();
+
+            $tenantsData = $json($r('tenants'));
+            $total = $tenantsData['total'] ?? 0;
+
+            return [
+                'tenants' => [
+                    'total' => $total,
+                    'active' => $json($r('tenants_active'))['total'] ?? 0,
+                    'suspended' => $json($r('tenants_suspended'))['total'] ?? 0,
+                    'trial' => $json($r('tenants_trial'))['total'] ?? 0,
+                ],
+                'users' => [
+                    'total' => $json($r('users'))['total'] ?? 0,
+                    'active' => $json($r('users'))['total'] ?? 0,
+                    'suspended' => 0,
+                ],
+                'subscriptions' => [
+                    'total' => $json($r('subscriptions'))['total'] ?? 0,
+                    'active' => $json($r('subscriptions_active'))['total'] ?? 0,
+                    'expired' => 0,
+                ],
+                'plans' => [
+                    'total' => $json($r('plans'))['total'] ?? 0,
+                    'active' => $json($r('plans'))['total'] ?? 0,
+                ],
+                'system' => [
+                    'status' => $ok($r('health')) ? 'healthy' : 'unhealthy',
+                    'api_connected' => $ok($r('health')),
+                ],
+                'recentActivity' => $json($r('audit_logs'))['data']['data'] ?? [],
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('TenantAppApiService getDashboardData failed', ['message' => $e->getMessage()]);
+            return $this->emptyDashboardData();
+        }
+    }
+
+    /**
+     * Default structure when API is unavailable or token missing.
+     */
+    protected function emptyDashboardData(): array
+    {
+        return [
+            'tenants' => ['total' => 0, 'active' => 0, 'suspended' => 0, 'trial' => 0],
+            'users' => ['total' => 0, 'active' => 0, 'suspended' => 0],
+            'subscriptions' => ['total' => 0, 'active' => 0, 'expired' => 0],
+            'plans' => ['total' => 0, 'active' => 0],
+            'system' => ['status' => 'unhealthy', 'api_connected' => false],
+            'recentActivity' => [],
+        ];
     }
 }
 

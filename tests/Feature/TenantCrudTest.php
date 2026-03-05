@@ -17,7 +17,7 @@ class TenantCrudTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create super admin user for testing
         $this->user = User::factory()->create([
             'email' => 'superadmin@lexomnis.com',
@@ -99,7 +99,7 @@ class TenantCrudTest extends TestCase
         $response = $this->actingAs($this->user)
             ->post('/tenants', []);
 
-        $response->assertSessionHasErrors(['name']);
+        $response->assertSessionHasErrors(['name', 'email']);
     }
 
     public function test_it_validates_email_format_when_creating_tenant()
@@ -116,7 +116,7 @@ class TenantCrudTest extends TestCase
     public function test_it_can_display_tenant_details()
     {
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/tenants/{$tenantId}" => Http::response([
@@ -138,7 +138,7 @@ class TenantCrudTest extends TestCase
     public function test_it_can_display_edit_tenant_page()
     {
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/tenants/{$tenantId}" => Http::response([
@@ -160,7 +160,7 @@ class TenantCrudTest extends TestCase
     public function test_it_can_update_tenant()
     {
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/tenants/{$tenantId}" => Http::response([
@@ -194,7 +194,7 @@ class TenantCrudTest extends TestCase
     public function test_it_can_suspend_tenant()
     {
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/tenants/{$tenantId}/suspend" => Http::response([
@@ -212,7 +212,7 @@ class TenantCrudTest extends TestCase
     public function test_it_can_activate_tenant()
     {
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/tenants/{$tenantId}/activate" => Http::response([
@@ -239,6 +239,7 @@ class TenantCrudTest extends TestCase
         $response = $this->actingAs($this->user)
             ->post('/tenants', [
                 'name' => 'Test Tenant',
+                'email' => 'test@example.com',
             ]);
 
         $response->assertSessionHasErrors(['error']);

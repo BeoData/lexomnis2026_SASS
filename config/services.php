@@ -37,9 +37,13 @@ return [
 
     'tenant_app' => [
         'url' => env('TENANT_APP_URL', 'http://localhost:8000'),
+        'api_path_prefix' => env('TENANT_APP_API_PATH_PREFIX', 'api/admin'),
         'api_token' => env('TENANT_APP_API_TOKEN'),
-        'timeout' => env('TENANT_APP_TIMEOUT', 30),
-        'retry_attempts' => env('TENANT_APP_RETRY_ATTEMPTS', 3),
+        'timeout' => (int) env('TENANT_APP_TIMEOUT', 30),
+        'timeout_max_cap' => (int) env('TENANT_APP_TIMEOUT_MAX_CAP', 15),
+        'connect_timeout' => (int) env('TENANT_APP_CONNECT_TIMEOUT', 5),
+        'dashboard_timeout' => (int) env('TENANT_APP_DASHBOARD_TIMEOUT', 8),
+        'retry_attempts' => (int) env('TENANT_APP_RETRY_ATTEMPTS', 2),
     ],
 
 ];

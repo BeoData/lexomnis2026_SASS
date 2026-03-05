@@ -14,6 +14,16 @@
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-bold text-gray-900">{{ tenant.name }}</h1>
                     <div class="flex space-x-2">
+                        <button
+                            v-if="tenant.status === 'active' || tenant.status === 'trial'"
+                            @click="impersonateTenant"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded flex items-center gap-2"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                            </svg>
+                            Uloguj se kao Klijent
+                        </button>
                         <Link
                             :href="route('tenants.edit', tenant.id)"
                             class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
@@ -474,6 +484,14 @@ const activateTenant = () => {
             onSuccess: () => {
                 router.reload();
             },
+        });
+    }
+};
+
+const impersonateTenant = () => {
+    if (confirm('Da li ste sigurni da želite da se ulogujete kao Klijent (Impersonate)?')) {
+        router.post(route('tenants.impersonate', props.tenant.id), {}, {
+            preserveScroll: true,
         });
     }
 };

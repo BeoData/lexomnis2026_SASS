@@ -28,7 +28,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/checkout/process', [App\Http\Controllers\CheckoutController::class, 'process'])->name('checkout.process');
     Route::get('/checkout/success', [App\Http\Controllers\CheckoutController::class, 'success'])->name('checkout.success');
     Route::get('/checkout/cancel', [App\Http\Controllers\CheckoutController::class, 'cancel'])->name('checkout.cancel');
-    
+
     // Subscription Management
     Route::get('/subscriptions/manage', [App\Http\Controllers\SubscriptionController::class, 'manage'])->name('subscriptions.manage');
     Route::post('/subscriptions/upgrade', [App\Http\Controllers\SubscriptionController::class, 'upgrade'])->name('subscriptions.upgrade');
@@ -38,9 +38,9 @@ Route::middleware(['auth'])->group(function () {
 // Protected routes
 Route::middleware(['auth'])->group(function () {
     Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
-    
+
     Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Tenant Management
     Route::prefix('tenants')->name('tenants.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\TenantController::class, 'index'])->name('index');
@@ -52,8 +52,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{id}', [App\Http\Controllers\Admin\TenantController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/suspend', [App\Http\Controllers\Admin\TenantController::class, 'suspend'])->name('suspend');
         Route::post('/{id}/activate', [App\Http\Controllers\Admin\TenantController::class, 'activate'])->name('activate');
+        Route::post('/{id}/impersonate', [App\Http\Controllers\Admin\TenantController::class, 'impersonate'])->name('impersonate');
     });
-    
+
     // User Management
     Route::prefix('users')->name('users.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\UserController::class, 'index'])->name('index');
@@ -62,21 +63,21 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{id}/reset-password', [App\Http\Controllers\Admin\UserController::class, 'resetPassword'])->name('reset-password');
         Route::post('/{id}/impersonate', [App\Http\Controllers\Admin\UserController::class, 'impersonate'])->name('impersonate');
     });
-    
+
     // System Monitoring
     Route::prefix('system')->name('system.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\SystemController::class, 'index'])->name('index');
         Route::get('/health', [App\Http\Controllers\Admin\SystemController::class, 'health'])->name('health');
         Route::get('/metrics', [App\Http\Controllers\Admin\SystemController::class, 'metrics'])->name('metrics');
     });
-    
+
     // Settings
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('index');
         Route::put('/', [App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('update');
         Route::post('/test-connection', [App\Http\Controllers\Admin\SettingsController::class, 'testConnection'])->name('test-connection');
     });
-    
+
     // Plans Management
     Route::prefix('plans')->name('plans.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\PlanController::class, 'index'])->name('index');
@@ -86,13 +87,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{id}/edit', [App\Http\Controllers\Admin\PlanController::class, 'edit'])->name('edit');
         Route::put('/{id}', [App\Http\Controllers\Admin\PlanController::class, 'update'])->name('update');
     });
-    
+
     // Subscriptions Management
     Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\SubscriptionController::class, 'index'])->name('index');
         Route::get('/{id}', [App\Http\Controllers\Admin\SubscriptionController::class, 'show'])->name('show');
     });
-    
+
     // Manual Payment Approval
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/manual', [App\Http\Controllers\Admin\ManualPaymentController::class, 'index'])->name('manual.index');
@@ -100,7 +101,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/manual/{id}/approve', [App\Http\Controllers\Admin\ManualPaymentController::class, 'approve'])->name('manual.approve');
         Route::post('/manual/{id}/reject', [App\Http\Controllers\Admin\ManualPaymentController::class, 'reject'])->name('manual.reject');
     });
-    
+
     // Feature Flags Management
     Route::prefix('feature-flags')->name('feature-flags.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\FeatureFlagController::class, 'index'])->name('index');
@@ -110,7 +111,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{id}/edit', [App\Http\Controllers\Admin\FeatureFlagController::class, 'edit'])->name('edit');
         Route::put('/{id}', [App\Http\Controllers\Admin\FeatureFlagController::class, 'update'])->name('update');
     });
-    
+
     // Audit Logs & Security
     Route::prefix('audit-logs')->name('audit-logs.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\AuditLogController::class, 'index'])->name('index');

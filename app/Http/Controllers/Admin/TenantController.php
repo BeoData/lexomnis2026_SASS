@@ -38,14 +38,14 @@ class TenantController extends Controller
         // Note: getPlans accepts filters array, but we need to pass grouped as query parameter
         // We'll need to modify the request to include grouped parameter
         $plansResponse = $this->apiService->getPlans(['is_active' => true]);
-        
+
         $plans = $plansResponse['success'] ? ($plansResponse['data'] ?? []) : [];
-        
+
         // If data is paginated, extract the data array
         if (is_array($plans) && isset($plans['data']) && is_array($plans['data'])) {
             $plans = $plans['data'];
         }
-        
+
         // Group plans by plan_key manually
         $groupedPlans = [];
         if (is_array($plans) && !empty($plans)) {
@@ -59,13 +59,13 @@ class TenantController extends Controller
                     'metadata' => $first['metadata'] ?? [],
                 ];
             })->values()->toArray();
-            
+
             $groupedPlans = $grouped;
         }
 
         \Log::info('Tenant create - grouped plans', ['count' => count($groupedPlans), 'plans' => $groupedPlans]);
 
-        return Inertia::render('Tenants/Create', [
+        return view('admin.tenants.create', [
             'groupedPlans' => $groupedPlans,
         ]);
     }
@@ -145,7 +145,7 @@ class TenantController extends Controller
         if (empty($tenant['subscription'])) {
             $plansResponse = $this->apiService->getPlans(['is_active' => true]);
             $plans = $plansResponse['success'] ? ($plansResponse['data'] ?? []) : [];
-            
+
             // If data is paginated, extract the data array
             if (is_array($plans) && isset($plans['data']) && is_array($plans['data'])) {
                 $plans = $plans['data'];
@@ -169,7 +169,7 @@ class TenantController extends Controller
         // Load plans from API
         $plansResponse = $this->apiService->getPlans(['is_active' => true]);
         $plans = $plansResponse['success'] ? ($plansResponse['data'] ?? []) : [];
-        
+
         // If data is paginated, extract the data array
         if (is_array($plans) && isset($plans['data']) && is_array($plans['data'])) {
             $plans = $plans['data'];
@@ -196,7 +196,7 @@ class TenantController extends Controller
         ]);
 
         // Separate tenant data from plan assignment
-        $tenantData = array_filter($validated, function($key) {
+        $tenantData = array_filter($validated, function ($key) {
             return !in_array($key, ['plan_id', 'billing_period']);
         }, ARRAY_FILTER_USE_KEY);
 
@@ -258,5 +258,25 @@ class TenantController extends Controller
 
         return redirect()->route('tenants.index')
             ->with('success', 'Tenant deleted successfully');
+    }
+
+    public function impersonate(string $id)
+    {
+        $response = $this->apiService->generateTenantImpersonationToken((int) $id, false);
+
+        if (!$response['success']) {
+            return back()->withErrors(['error' => $response['error'] ?? 'Failed to generate impersonation token']);
+        }
+
+        $impersonateUrl = $response['data']['impersonate_url'] ?? null;
+
+        if ($impersonateUrl) {
+            // Include target app base URL since TenantAppApiService doesn't prepend domain to inner responses
+            // Actually config('services.tenant_app.url') is available? 
+            // We can just rely on the API returning the full absolute URL.
+            return \Inertia\Inertia::location($impersonateUrl);
+        }
+
+        return back()->with('success', 'Impersonation done successfully but no URL provided.');
     }
 }
