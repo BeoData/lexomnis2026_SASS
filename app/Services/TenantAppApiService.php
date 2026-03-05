@@ -436,6 +436,17 @@ class TenantAppApiService
         return $this->request('GET', "audit-logs/{$id}");
     }
 
+    // Role and Permissions Management
+    public function getRoles(): array
+    {
+        return $this->request('GET', 'roles');
+    }
+
+    public function getPermissions(): array
+    {
+        return $this->request('GET', 'permissions');
+    }
+
     /**
      * Fetch all dashboard data in one parallel batch (max wait = one request timeout).
      */

@@ -89,6 +89,54 @@
                         @enderror
                     </div>
 
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="status" class="block text-sm font-medium text-gray-700">
+                                Tenant Status *
+                            </label>
+                            <select
+                                id="status"
+                                name="status"
+                                required
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('status') border-red-300 @enderror"
+                            >
+                                <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                                <option value="suspended" {{ old('status') === 'suspended' ? 'selected' : '' }}>Suspended</option>
+                            </select>
+                            @error('status')
+                                <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="plan_id" class="block text-sm font-medium text-gray-700">
+                                Subscription Plan *
+                            </label>
+                            <select
+                                id="plan_id"
+                                name="plan_id"
+                                required
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('plan_id') border-red-300 @enderror"
+                            >
+                                <option value="">Select a plan</option>
+                                @foreach($groupedPlans as $group)
+                                    @php 
+                                        $plan = $group['monthly'] ?? $group['yearly'];
+                                        $isTrial = isset($group['metadata']['is_trial']) && $group['metadata']['is_trial'];
+                                    @endphp
+                                    <option value="{{ $plan['id'] }}" {{ (old('plan_id') == $plan['id'] || ($isTrial && !old('plan_id'))) ? 'selected' : '' }}>
+                                        {{ $group['name'] }} ({{ $plan['price'] }} {{ $plan['currency'] }})
+                                        @if($isTrial) [30-Day Trial] @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('plan_id')
+                                <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
+                            @enderror
+                            <input type="hidden" name="billing_period" value="monthly">
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label for="country" class="block text-sm font-medium text-gray-700">

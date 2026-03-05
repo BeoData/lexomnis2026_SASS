@@ -77,6 +77,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('index');
         Route::put('/', [App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('update');
         Route::post('/test-connection', [App\Http\Controllers\Admin\SettingsController::class, 'testConnection'])->name('test-connection');
+        
+        // Roles & Permissions System Overview
+        Route::get('/system/roles-permissions', [App\Http\Controllers\Admin\RolesPermissionsController::class, 'index'])->name('system.roles-permissions');
     });
 
     // Plans Management

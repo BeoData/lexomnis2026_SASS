@@ -80,7 +80,8 @@ class TenantController extends Controller
             'country' => ['nullable', 'string', 'max:255'],
             'timezone' => ['nullable', 'string'],
             'currency' => ['nullable', 'string', 'max:3'],
-            'plan_id' => ['nullable', 'integer', 'exists:plans,id'],
+            'status' => ['required', 'string', 'in:active,suspended'],
+            'plan_id' => ['required', 'integer', 'exists:plans,id'],
             'billing_period' => ['nullable', 'in:monthly,yearly'],
             'trial_days' => ['nullable', 'integer', 'min:1', 'max:365'],
         ], [
@@ -193,6 +194,7 @@ class TenantController extends Controller
             'currency' => 'nullable|string|max:3',
             'plan_id' => 'nullable|integer',
             'billing_period' => 'nullable|in:monthly,yearly',
+            'password' => 'nullable|string|min:8',
         ]);
 
         // Separate tenant data from plan assignment

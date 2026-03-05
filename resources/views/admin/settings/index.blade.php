@@ -140,7 +140,40 @@
                             </div>
                         </div>
                     </div>
+                <!-- Configuration & Blueprints -->
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Master Data & Blueprints</h2>
+                    <p class="text-sm text-gray-600 mb-6">
+                        Manage global system values and role templates assigned to all new tenants.
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <a href="{{ route('settings.system.roles-permissions') }}" class="flex items-center p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all group">
+                            <div class="p-3 bg-blue-100 rounded-lg mr-4 group-hover:bg-blue-200">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Roles & Permissions</h3>
+                                <p class="text-xs text-gray-500">View and manage system uloge and permisije templates.</p>
+                            </div>
+                        </a>
+                        
+                        <div class="flex items-center p-4 border rounded-lg bg-gray-50 opacity-60 cursor-not-allowed">
+                            <div class="p-3 bg-gray-200 rounded-lg mr-4">
+                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-500">Global Lookups</h3>
+                                <p class="text-xs text-gray-400">Coming soon: Manage global dictionaries.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
 
                 <!-- General Settings -->
                 <div class="bg-white shadow rounded-lg p-6">

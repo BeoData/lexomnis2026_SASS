@@ -54,6 +54,21 @@
                     </div>
 
                     <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">
+                            Password <span class="text-xs text-gray-500 font-normal">(Leave blank to keep current)</span>
+                        </label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('password') border-red-300 @enderror"
+                        />
+                        @error('password')
+                            <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div>
                         <label for="status" class="block text-sm font-medium text-gray-700">
                             Status
                         </label>
@@ -64,7 +79,6 @@
                         >
                             <option value="active" {{ old('status', $tenant['status'] ?? '') === 'active' ? 'selected' : '' }}>Active</option>
                             <option value="suspended" {{ old('status', $tenant['status'] ?? '') === 'suspended' ? 'selected' : '' }}>Suspended</option>
-                            <option value="trial" {{ old('status', $tenant['status'] ?? '') === 'trial' ? 'selected' : '' }}>Trial</option>
                             <option value="deleted" {{ old('status', $tenant['status'] ?? '') === 'deleted' ? 'selected' : '' }}>Deleted</option>
                         </select>
                         @error('status')

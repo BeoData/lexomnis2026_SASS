@@ -17,7 +17,7 @@ class PlanController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['status', 'search']);
+        $filters = $request->only(['status', 'search', 'billing_period']);
         $response = $this->apiService->getPlans($filters);
 
         if (!$response['success']) {
@@ -31,23 +31,20 @@ class PlanController extends Controller
         if (is_array($data) && isset($data['data']) && is_array($data['data'])) {
             $plans = $data['data'];
         } elseif (is_array($data) && !isset($data['data'])) {
-            // If data is a direct array of plans
             $plans = $data;
         } else {
             $plans = [];
         }
 
-        // Log for debugging (remove in production)
-        \Log::info('Plans index response', [
-            'response_structure' => array_keys($data ?? []),
-            'plans_count' => count($plans),
-            'has_data_key' => isset($data['data']),
-        ]);
+        // Filter by billing_period client-side if needed
+        $billingPeriod = $request->get('billing_period', 'monthly');
+        $plans = array_values(array_filter($plans, fn($p) => ($p['billing_period'] ?? 'monthly') === $billingPeriod));
 
         return view('admin.plans.index', [
             'plans' => $plans,
             'pagination' => $data,
             'filters' => $filters,
+            'billingPeriod' => $billingPeriod,
         ]);
     }
 
