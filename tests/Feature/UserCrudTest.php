@@ -69,7 +69,7 @@ class UserCrudTest extends TestCase
         
         // Mock API response
         Http::fake([
-            "*/api/admin/users/{$userId}" => Http::response([
+            "*/api/admin/users/{$userId}*" => Http::response([
                 'id' => $userId,
                 'name' => 'Test User',
                 'email' => 'test@example.com',

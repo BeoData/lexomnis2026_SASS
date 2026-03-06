@@ -15,24 +15,31 @@
                 </div>
                 
                 <p class="text-lg text-gray-600 mb-8">
-                    Vaša registracija je uspešno završena!
+                    Vaša registracija je uspešno završena! Sada imate pristup svom radnom okruženju (Tenant) i portalu za klijente (SASS Profil).
                 </p>
                 
-                <div class="space-y-4">
+                <div class="flex flex-col gap-4 max-w-sm mx-auto">
+                    <!-- Primarna akcija: Ulazak u samu aplikaciju -->
+                    <a
+                        href="http://127.0.0.1:8001/login"
+                        class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition-all hover:scale-105"
+                    >
+                        Uđite u Aplikaciju (8001) →
+                    </a>
+
+                    <div class="flex items-center justify-center my-2 text-gray-400">
+                        <div class="border-t border-gray-200 flex-grow mr-3"></div>
+                        <span class="text-xs uppercase font-semibold">ili</span>
+                        <div class="border-t border-gray-200 flex-grow ml-3"></div>
+                    </div>
+
+                    <!-- Sekundarna akcija: Upravljanje profilom na SASS portalu -->
                     <Link
                         :href="route('login')"
-                        class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                        class="inline-block bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg transition-colors border border-gray-300"
                     >
-                        Prijavite Se
+                        Upravljaj Profilom i Računima (8000)
                     </Link>
-                    <div>
-                        <Link
-                            :href="route('pricing')"
-                            class="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                            Vratite se na Pricing
-                        </Link>
-                    </div>
                 </div>
             </div>
         </div>

@@ -25,7 +25,7 @@ class TenantController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to fetch tenants']);
         }
 
-        return view('admin.tenants.index', [
+        return Inertia::render('Tenants/Index', [
             'tenants' => $response['data']['data'] ?? [],
             'pagination' => $response['data'] ?? [],
             'filters' => $filters,
@@ -65,7 +65,7 @@ class TenantController extends Controller
 
         \Log::info('Tenant create - grouped plans', ['count' => count($groupedPlans), 'plans' => $groupedPlans]);
 
-        return view('admin.tenants.create', [
+        return Inertia::render('Tenants/Create', [
             'groupedPlans' => $groupedPlans,
         ]);
     }
@@ -80,27 +80,28 @@ class TenantController extends Controller
             'country' => ['nullable', 'string', 'max:255'],
             'timezone' => ['nullable', 'string'],
             'currency' => ['nullable', 'string', 'max:3'],
-            'status' => ['required', 'string', 'in:active,suspended'],
-            'plan_id' => ['required', 'integer', 'exists:plans,id'],
+            'status' => ['nullable', 'string'],
+            'registration_type' => ['nullable', 'string', 'in:trial,paid'],
+            'plan_id' => ['nullable', 'integer'],
             'billing_period' => ['nullable', 'in:monthly,yearly'],
             'trial_days' => ['nullable', 'integer', 'min:1', 'max:365'],
         ], [
             'email.required' => 'Email je obavezan.',
             'email.email' => 'Email mora biti validan.',
-            'email.unique' => 'Tenant sa ovim email-om već postoji.',
-            'phone.unique' => 'Tenant sa ovim telefonom već postoji.',
         ]);
+
+        // Pro-active defaults for robustness
+        $validated['status'] = $validated['status'] ?? 'active';
+        $validated['registration_type'] = $validated['registration_type'] ?? 'trial';
+        $validated['country'] = $validated['country'] ?? 'RS';
+        $validated['timezone'] = $validated['timezone'] ?? 'Europe/Belgrade';
+        $validated['currency'] = $validated['currency'] ?? 'RSD';
 
         // Generate password if not provided
         if (empty($validated['password'])) {
             $validated['password'] = \Illuminate\Support\Str::random(12);
             \Log::info('Password auto-generated for tenant', ['email' => $validated['email']]);
         }
-
-        // Set defaults if not provided
-        $validated['country'] = $validated['country'] ?? 'RS';
-        $validated['timezone'] = $validated['timezone'] ?? 'Europe/Belgrade';
-        $validated['currency'] = $validated['currency'] ?? 'RSD';
 
         // Log request data for debugging
         \Log::info('Creating tenant - request data', [
@@ -153,7 +154,7 @@ class TenantController extends Controller
             }
         }
 
-        return view('admin.tenants.show', [
+        return Inertia::render('Tenants/Show', [
             'tenant' => $tenant,
             'plans' => $plans,
         ]);
@@ -176,7 +177,7 @@ class TenantController extends Controller
             $plans = $plans['data'];
         }
 
-        return view('admin.tenants.edit', [
+        return Inertia::render('Tenants/Edit', [
             'tenant' => $response['data'] ?? [],
             'plans' => $plans,
         ]);

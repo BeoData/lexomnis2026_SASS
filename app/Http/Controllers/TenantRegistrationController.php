@@ -98,33 +98,33 @@ class TenantRegistrationController extends Controller
 
         try {
             // Call public API endpoint
-            $baseUrl = config('services.tenant_app_api.base_url', env('TENANT_APP_API_URL', 'http://localhost:8000'));
-            $apiToken = config('services.tenant_app_api.token', env('TENANT_APP_API_TOKEN', ''));
+            $baseUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+            $apiToken = \App\Models\Setting::getByKey('tenant_app_api_token') ?: config('services.tenant_app.api_token');
+
+            $baseUrl = rtrim($baseUrl, '/');
+            $apiUrl = "{$baseUrl}/api/public/tenants/register";
 
             Log::debug('TenantRegistrationController: Before API call', [
                 'baseUrl' => $baseUrl,
-                'apiUrl' => "{$baseUrl}/api/public/tenants/register",
+                'apiUrl' => $apiUrl,
                 'hasApiToken' => !empty($apiToken)
             ]);
 
-            $client = new \GuzzleHttp\Client();
-            $response = $client->post("{$baseUrl}/api/public/tenants/register", [
-                'json' => $validated,
-                'headers' => [
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
-                ],
-            ]);
+                ])
+                ->post($apiUrl, $validated);
 
-            $statusCode = $response->getStatusCode();
-            $responseBody = $response->getBody()->getContents();
-            $response->getBody()->rewind();
+            $statusCode = $response->status();
+            $responseBody = $response->body();
+             
             Log::debug('TenantRegistrationController: API response received', [
                 'statusCode' => $statusCode,
                 'responseBody' => $responseBody
             ]);
 
-            $data = json_decode($responseBody, true);
+            $data = $response->json();
 
             Log::debug('TenantRegistrationController: Response parsed', [
                 'success' => $data['success'] ?? false,
@@ -133,17 +133,25 @@ class TenantRegistrationController extends Controller
             ]);
 
             if ($data['success'] ?? false) {
+                // 1. Create user in SASS database (for billing, profile, upgrades)
+                // This user is NOT a SuperAdmin, just a client.
+                \App\Models\User::updateOrCreate(
+                    ['email' => $validated['email']],
+                    [
+                        'name' => $validated['name'],
+                        'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
+                        // 'role' => 'client', // If you have roles in SASS
+                    ]
+                );
+
                 if ($validated['registration_type'] === 'trial') {
-                    // Redirect to email verification page
                     return redirect()->route('tenant.register.success')
-                        ->with('message', 'Registracija je uspešna! Molimo vas da proverite vaš email i potvrdite vašu email adresu.');
+                        ->with('message', 'Registracija je uspešna! Vaš nalog za plaćanja i radno okruženje su kreirani.');
                 } else {
-                    // Redirect to payment URL
                     if (isset($data['data']['payment_url'])) {
                         return redirect($data['data']['payment_url']);
                     } else {
-                        return redirect()->route('tenant.register.success')
-                            ->with('message', 'Registracija je uspešna! Molimo vas da sačekate admin odobrenje.');
+                        return redirect('http://127.0.0.1:8001/login');
                     }
                 }
             } else {
@@ -151,36 +159,22 @@ class TenantRegistrationController extends Controller
                     'error' => $data['error'] ?? 'Došlo je do greške prilikom registracije.',
                 ])->withInput();
             }
-        } catch (\GuzzleHttp\Exception\ClientException $e) {
-            $response = $e->getResponse();
-            $errorData = json_decode($response->getBody()->getContents(), true);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+            $errorData = $response?->json() ?? ['message' => $e->getMessage()];
 
-            Log::debug('TenantRegistrationController: ClientException caught', [
-                'statusCode' => $response->getStatusCode(),
+            Log::debug('TenantRegistrationController: RequestException caught', [
+                'statusCode' => $response?->status(),
                 'errorData' => $errorData
             ]);
 
             Log::error('Tenant registration failed', [
                 'error' => $errorData,
-                'status' => $response->getStatusCode(),
+                'status' => $response?->status(),
             ]);
 
             return back()->withErrors([
                 'error' => $errorData['error'] ?? $errorData['message'] ?? 'Došlo je do greške prilikom registracije.',
-            ])->withInput();
-        } catch (\GuzzleHttp\Exception\RequestException $e) {
-            Log::debug('TenantRegistrationController: RequestException caught', [
-                'message' => $e->getMessage(),
-                'hasResponse' => $e->hasResponse()
-            ]);
-
-            Log::error('Tenant registration request exception', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return back()->withErrors([
-                'error' => 'Došlo je do greške prilikom registracije. Molimo pokušajte ponovo.',
             ])->withInput();
         } catch (\Exception $e) {
             Log::debug('TenantRegistrationController: General Exception caught', [
@@ -205,18 +199,17 @@ class TenantRegistrationController extends Controller
     public function verifyEmail(string $token)
     {
         try {
-            $baseUrl = config('services.tenant_app_api.base_url', env('TENANT_APP_API_URL', 'http://localhost:8000'));
+            $baseUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+            $baseUrl = rtrim($baseUrl, '/');
+            $apiUrl = "{$baseUrl}/api/public/tenants/verify-email";
 
-            $client = new \GuzzleHttp\Client();
-            $response = $client->post("{$baseUrl}/api/public/tenants/verify-email", [
-                'json' => ['token' => $token],
-                'headers' => [
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
-                ],
-            ]);
+                ])
+                ->post($apiUrl, ['token' => $token]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
+            $data = $response->json();
 
             if ($data['success'] ?? false) {
                 return redirect()->route('tenant.register.success')
@@ -225,13 +218,13 @@ class TenantRegistrationController extends Controller
                 return redirect()->route('tenant.register')
                     ->withErrors(['error' => $data['error'] ?? 'Nevažeći ili istekao verification token.']);
             }
-        } catch (\GuzzleHttp\Exception\ClientException $e) {
-            $response = $e->getResponse();
-            $errorData = json_decode($response->getBody()->getContents(), true);
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+            $errorData = $response?->json() ?? ['message' => $e->getMessage()];
 
             Log::error('Email verification failed', [
                 'error' => $errorData,
-                'status' => $response->getStatusCode(),
+                'status' => $response?->status(),
             ]);
 
             return redirect()->route('tenant.register')
@@ -256,18 +249,17 @@ class TenantRegistrationController extends Controller
         ]);
 
         try {
-            $baseUrl = config('services.tenant_app_api.base_url', env('TENANT_APP_API_URL', 'http://localhost:8000'));
+            $baseUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+            $baseUrl = rtrim($baseUrl, '/');
+            $apiUrl = "{$baseUrl}/api/public/tenants/resend-verification";
 
-            $client = new \GuzzleHttp\Client();
-            $response = $client->post("{$baseUrl}/api/public/tenants/resend-verification", [
-                'json' => $validated,
-                'headers' => [
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
-                ],
-            ]);
+                ])
+                ->post($apiUrl, $validated);
 
-            $data = json_decode($response->getBody()->getContents(), true);
+            $data = $response->json();
 
             if ($data['success'] ?? false) {
                 return back()->with('message', 'Verification email je ponovo poslat!');

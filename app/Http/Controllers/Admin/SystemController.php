@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\TenantAppApiService;
 use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
 
 class SystemController extends Controller
 {
@@ -22,7 +23,7 @@ class SystemController extends Controller
         $queues = $this->apiService->getQueueStatus();
         $crons = $this->apiService->getCronStatus();
 
-        return view('admin.system.index', [
+        return Inertia::render('System/Index', [
             'health' => $health['success'] ? $health['data'] : null,
             'metrics' => $metrics['success'] ? $metrics['data'] : null,
             'queues' => $queues['success'] ? $queues['data'] : null,
@@ -38,7 +39,7 @@ class SystemController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to fetch system health']);
         }
 
-        return view('admin.system.health', [
+        return Inertia::render('System/Health', [
             'health' => $response['data'] ?? [],
         ]);
     }
@@ -51,7 +52,7 @@ class SystemController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to fetch metrics']);
         }
 
-        return view('admin.system.metrics', [
+        return Inertia::render('System/Metrics', [
             'metrics' => $response['data'] ?? [],
         ]);
     }

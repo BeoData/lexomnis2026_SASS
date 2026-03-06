@@ -22,19 +22,19 @@ class TenantAppApiService
     {
         // Try to get from settings first, then fallback to config/env
         try {
-            $this->baseUrl = \App\Models\Setting::get('tenant_app_url') 
-                ?: config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
+            $this->baseUrl = \App\Models\Setting::getByKey('tenant_app_url') 
+                ?: config('services.tenant_app.url');
             
-            $this->apiToken = \App\Models\Setting::get('tenant_app_api_token') 
-                ?: config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
+            $this->apiToken = \App\Models\Setting::getByKey('tenant_app_api_token') 
+                ?: config('services.tenant_app.api_token') ?: null;
             
-            $timeoutRaw = (int) (\App\Models\Setting::get('tenant_app_timeout') 
+            $timeoutRaw = (int) (\App\Models\Setting::getByKey('tenant_app_timeout') 
                 ?: config('services.tenant_app.timeout', 30));
             $this->timeout = min((int) config('services.tenant_app.timeout_max_cap', 15), $timeoutRaw);
 
             $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 5);
             
-            $this->retryAttempts = (int) (\App\Models\Setting::get('tenant_app_retry_attempts') 
+            $this->retryAttempts = (int) (\App\Models\Setting::getByKey('tenant_app_retry_attempts') 
                 ?: config('services.tenant_app.retry_attempts', 2));
 
             $this->retryDelayMs = (int) config('services.tenant_app.retry_delay_ms', 250);
@@ -46,8 +46,8 @@ class TenantAppApiService
             );
         } catch (\Exception $e) {
             // Fallback to config/env if settings table doesn't exist
-            $this->baseUrl = config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
-            $this->apiToken = config('services.tenant_app.api_token', env('TENANT_APP_API_TOKEN')) ?: null;
+            $this->baseUrl = config('services.tenant_app.url');
+            $this->apiToken = config('services.tenant_app.api_token') ?: null;
             
             $timeoutRaw = (int) config('services.tenant_app.timeout', 30);
             $this->timeout = min((int) config('services.tenant_app.timeout_max_cap', 15), $timeoutRaw);

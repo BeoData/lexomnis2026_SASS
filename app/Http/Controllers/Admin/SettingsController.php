@@ -7,6 +7,7 @@ use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Http;
+use Inertia\Inertia;
 
 class SettingsController extends Controller
 {
@@ -20,7 +21,7 @@ class SettingsController extends Controller
         // Check API connection status
         $apiConnectionStatus = $this->checkApiConnection();
 
-        return view('admin.settings.index', [
+        return Inertia::render('Settings/Index', [
             'groups' => $groups,
             'apiConnectionStatus' => $apiConnectionStatus,
         ]);

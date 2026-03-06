@@ -251,6 +251,8 @@ const form = useForm({
     country: 'RS',
     timezone: 'Europe/Belgrade',
     currency: 'RSD',
+    status: 'active',
+    registration_type: 'trial',
     plan_id: null,
     billing_period: null,
     trial_days: 7,
@@ -274,6 +276,9 @@ const submit = () => {
     if (form.processing) {
         return; // Prevent double submission
     }
+
+    // Map subscriptionType to registration_type
+    form.registration_type = subscriptionType.value === 'trial' ? 'trial' : 'paid';
 
     // Validate required fields
     if (!form.name || !form.email) {
@@ -306,6 +311,8 @@ const submit = () => {
         password: form.password ? '***' : 'MISSING',
         plan_id: form.plan_id,
         billing_period: form.billing_period,
+        status: form.status,
+        registration_type: form.registration_type,
     });
     
     form.post(route('tenants.store'), {

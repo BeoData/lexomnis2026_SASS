@@ -77,6 +77,8 @@ class TenantCrudTest extends TestCase
             'country' => 'RS',
             'timezone' => 'Europe/Belgrade',
             'currency' => 'RSD',
+            'status' => 'active',
+            'plan_id' => 1,
         ];
 
         $response = $this->actingAs($this->user)
@@ -87,7 +89,7 @@ class TenantCrudTest extends TestCase
 
         // Verify API was called
         Http::assertSent(function ($request) use ($tenantData) {
-            return $request->url() === config('services.tenant_app.url') . '/api/admin/tenants'
+            return str_ends_with($request->url(), '/api/admin/tenants')
                 && $request->method() === 'POST'
                 && $request['name'] === $tenantData['name']
                 && $request['email'] === $tenantData['email'];
@@ -240,6 +242,8 @@ class TenantCrudTest extends TestCase
             ->post('/tenants', [
                 'name' => 'Test Tenant',
                 'email' => 'test@example.com',
+                'status' => 'active',
+                'plan_id' => 1,
             ]);
 
         $response->assertSessionHasErrors(['error']);

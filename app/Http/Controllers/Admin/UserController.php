@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\TenantAppApiService;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class UserController extends Controller
 {
@@ -35,7 +36,7 @@ class UserController extends Controller
             $pagination = $response['data'] ?? [];
         }
 
-        return view('admin.users.index', [
+        return Inertia::render('Users/Index', [
             'users' => $users,
             'pagination' => $pagination,
             'filters' => $filters,
@@ -52,7 +53,7 @@ class UserController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'User not found']);
         }
 
-        return view('admin.users.show', [
+        return Inertia::render('Users/Show', [
             'user' => $response['data'] ?? [],
             'tenant_id' => $tenantId,
         ]);

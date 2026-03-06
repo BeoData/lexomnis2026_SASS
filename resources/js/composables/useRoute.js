@@ -33,6 +33,7 @@ export function useRoute() {
             'pricing': '/pricing',
             'login': '/login',
             'tenant.register': '/register',
+            'tenant.register.store': '/register',
             'system.index': '/system',
             'system.health': '/system/health',
             'system.metrics': '/system/metrics',

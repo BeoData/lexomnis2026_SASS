@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\TenantAppApiService;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class PlanController extends Controller
 {
@@ -40,7 +41,7 @@ class PlanController extends Controller
         $billingPeriod = $request->get('billing_period', 'monthly');
         $plans = array_values(array_filter($plans, fn($p) => ($p['billing_period'] ?? 'monthly') === $billingPeriod));
 
-        return view('admin.plans.index', [
+        return Inertia::render('Plans/Index', [
             'plans' => $plans,
             'pagination' => $data,
             'filters' => $filters,
@@ -50,7 +51,7 @@ class PlanController extends Controller
 
     public function create()
     {
-        return view('admin.plans.create');
+        return Inertia::render('Plans/Create');
     }
 
     public function store(Request $request)
@@ -93,7 +94,7 @@ class PlanController extends Controller
             return back()->withErrors(['error' => $response['error'] ?? 'Plan not found']);
         }
 
-        return view('admin.plans.show', [
+        return Inertia::render('Plans/Show', [
             'plan' => $response['data'] ?? [],
         ]);
     }
@@ -112,7 +113,7 @@ class PlanController extends Controller
             $plan['billing_cycle'] = $plan['billing_period'];
         }
 
-        return view('admin.plans.edit', [
+        return Inertia::render('Plans/Edit', [
             'plan' => $plan,
         ]);
     }
