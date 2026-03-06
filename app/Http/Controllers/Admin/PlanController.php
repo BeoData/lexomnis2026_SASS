@@ -49,6 +49,12 @@ class PlanController extends Controller
         ]);
     }
 
+    public function list(Request $request)
+    {
+        $response = $this->apiService->getPlans(['is_active' => true, 'grouped' => true]);
+        return response()->json($response['data'] ?? []);
+    }
+
     public function create()
     {
         return Inertia::render('Plans/Create');

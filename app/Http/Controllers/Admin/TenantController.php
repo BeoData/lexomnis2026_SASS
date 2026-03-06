@@ -189,7 +189,7 @@ class TenantController extends Controller
             'name' => 'sometimes|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:255',
-            'status' => 'sometimes|in:active,suspended,trial,deleted',
+            'status' => 'sometimes|in:active,suspended,deleted',
             'country' => 'nullable|string|max:255',
             'timezone' => 'nullable|string',
             'currency' => 'nullable|string|max:3',

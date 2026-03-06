@@ -15,7 +15,7 @@
                     <h1 class="text-3xl font-bold text-gray-900">{{ tenant.name }}</h1>
                     <div class="flex space-x-2">
                         <button
-                            v-if="tenant.status === 'active' || tenant.status === 'trial'"
+                            v-if="tenant.status === 'active'"
                             @click="impersonateTenant"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded flex items-center gap-2"
                         >
@@ -51,17 +51,12 @@
                 <div class="bg-white shadow-lg rounded-lg p-6 mb-6 border-2 border-blue-200">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-bold text-gray-900">Current Plan</h2>
-                        <button
-                            @click="showAssignPlanModal = true"
-                            :class="{
-                                'bg-blue-600 hover:bg-blue-700': !tenant.subscription,
-                                'bg-gray-600 hover:bg-gray-700': tenant.subscription
-                            }"
-                            class="text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+                        <Link
+                            :href="route('tenants.edit', tenant.id)"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded text-sm transition-all shadow-sm"
                         >
-                            <span v-if="!tenant.subscription">Assign Plan</span>
-                            <span v-else>Change Plan</span>
-                        </button>
+                            {{ tenant.subscription ? 'Change Plan' : 'Assign Plan' }}
+                        </Link>
                     </div>
 
                     <!-- Plan Card - Always Visible -->
@@ -235,7 +230,7 @@
                                     :class="{
                                         'bg-green-100 text-green-800': tenant.status === 'active',
                                         'bg-red-100 text-red-800': tenant.status === 'suspended',
-                                        'bg-yellow-100 text-yellow-800': tenant.status === 'trial',
+                                        'bg-gray-100 text-gray-800': tenant.status === 'deleted',
                                     }"
                                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                 >
@@ -275,89 +270,6 @@
                         </div>
                     </dl>
                 </div>
-
-                <!-- Assign Plan Modal -->
-                <div v-if="showAssignPlanModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click.self="showAssignPlanModal = false">
-                    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
-                        <div class="mt-3">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Assign Plan</h3>
-                            <div v-if="loadingPlans" class="text-center py-4">
-                                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            </div>
-                            <div v-else>
-                                <!-- Billing Period Tabs -->
-                                <div class="flex space-x-2 mb-6 border-b">
-                                    <button
-                                        @click="selectedBillingPeriod = 'monthly'"
-                                        :class="{
-                                            'border-b-2 border-blue-600 text-blue-600': selectedBillingPeriod === 'monthly',
-                                            'text-gray-500': selectedBillingPeriod !== 'monthly'
-                                        }"
-                                        class="px-4 py-2 font-medium"
-                                    >
-                                        Monthly
-                                    </button>
-                                    <button
-                                        @click="selectedBillingPeriod = 'yearly'"
-                                        :class="{
-                                            'border-b-2 border-blue-600 text-blue-600': selectedBillingPeriod === 'yearly',
-                                            'text-gray-500': selectedBillingPeriod !== 'yearly'
-                                        }"
-                                        class="px-4 py-2 font-medium"
-                                    >
-                                        Annually
-                                    </button>
-                                </div>
-
-                                <!-- Plans Grid -->
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                                    <div
-                                        v-for="planGroup in groupedPlans"
-                                        :key="planGroup.plan_key"
-                                        @click="selectPlan(planGroup)"
-                                        :class="{
-                                            'ring-2 ring-blue-600': selectedPlan?.plan_key === planGroup.plan_key,
-                                            'hover:shadow-lg': true
-                                        }"
-                                        class="border rounded-lg p-4 cursor-pointer transition-shadow"
-                                    >
-                                        <div class="flex justify-between items-start mb-2">
-                                            <h4 class="font-semibold text-lg">{{ planGroup.name }}</h4>
-                                            <span v-if="planGroup.metadata?.popular" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Popular</span>
-                                        </div>
-                                        <div class="text-2xl font-bold mb-2">
-                                            ${{ selectedBillingPeriod === 'monthly' ? planGroup.monthly?.price : planGroup.yearly?.price }}
-                                            <span class="text-sm font-normal text-gray-500">USD</span>
-                                        </div>
-                                        <div class="text-sm text-gray-600 mb-2">
-                                            {{ planGroup.metadata?.tagline || '' }}
-                                        </div>
-                                        <div class="text-sm font-medium mb-2">
-                                            {{ planGroup.metadata?.highlight || '' }}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-6 flex justify-end space-x-3">
-                                    <button
-                                        @click="showAssignPlanModal = false"
-                                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        @click="assignPlan"
-                                        :disabled="!selectedPlan || assigningPlan"
-                                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded disabled:opacity-50"
-                                    >
-                                        <span v-if="assigningPlan">Assigning...</span>
-                                        <span v-else>Assign Plan</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </AuthenticatedLayout>
@@ -366,8 +278,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Pages/Layouts/AuthenticatedLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
-import axios from 'axios';
 import { useRoute } from '@/composables/useRoute';
 
 const { route } = useRoute();
@@ -377,93 +287,6 @@ const props = defineProps({
         type: Object,
         required: true,
     },
-});
-
-const showAssignPlanModal = ref(false);
-const loadingPlans = ref(false);
-const groupedPlans = ref([]);
-const selectedBillingPeriod = ref('monthly');
-const selectedPlan = ref(null);
-const assigningPlan = ref(false);
-
-const loadPlans = async () => {
-    loadingPlans.value = true;
-    try {
-        // Use TenantAppApiService endpoint
-        const baseUrl = window.location.origin.replace(':8001', ':8000'); // Tenant app URL
-        const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content') || '';
-        
-        const response = await axios.get(`${baseUrl}/api/admin/plans`, {
-            params: {
-                grouped: true,
-                is_active: true,
-            },
-            headers: {
-                'Authorization': `Bearer ${apiToken}`,
-                'Accept': 'application/json',
-            },
-        });
-        groupedPlans.value = response.data;
-    } catch (error) {
-        console.error('Failed to load plans:', error);
-        alert('Failed to load plans. Please try again.');
-    } finally {
-        loadingPlans.value = false;
-    }
-};
-
-const selectPlan = (planGroup) => {
-    selectedPlan.value = planGroup;
-};
-
-const assignPlan = async () => {
-    if (!selectedPlan.value) return;
-
-    const plan = selectedBillingPeriod.value === 'monthly' 
-        ? selectedPlan.value.monthly 
-        : selectedPlan.value.yearly;
-
-    if (!plan) {
-        alert('Selected plan is not available for this billing period.');
-        return;
-    }
-
-    assigningPlan.value = true;
-    try {
-        // Use TenantAppApiService endpoint
-        const baseUrl = window.location.origin.replace(':8001', ':8000'); // Tenant app URL
-        const apiToken = document.querySelector('meta[name="api-token"]')?.getAttribute('content') || '';
-        
-        const response = await axios.post(`${baseUrl}/api/admin/tenants/${props.tenant.id}/assign-plan`, {
-            plan_id: plan.id,
-            billing_period: selectedBillingPeriod.value,
-        }, {
-            headers: {
-                'Authorization': `Bearer ${apiToken}`,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (response.data.success || response.data.message) {
-            showAssignPlanModal.value = false;
-            router.reload();
-        } else {
-            alert('Failed to assign plan: ' + (response.data.error || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('Failed to assign plan:', error);
-        alert('Failed to assign plan. Please try again.');
-    } finally {
-        assigningPlan.value = false;
-    }
-};
-
-// Load plans when modal opens
-watch(showAssignPlanModal, (newVal) => {
-    if (newVal) {
-        loadPlans();
-    }
 });
 
 const suspendTenant = () => {

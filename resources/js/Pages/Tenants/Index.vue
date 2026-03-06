@@ -28,7 +28,7 @@
                             <option value="">All Statuses</option>
                             <option value="active">Active</option>
                             <option value="suspended">Suspended</option>
-                            <option value="trial">Trial</option>
+                            <option value="deleted">Deleted</option>
                         </select>
                         <button
                             type="submit"
@@ -54,7 +54,7 @@
                                                 :class="{
                                                     'bg-green-100 text-green-800': tenant.status === 'active',
                                                     'bg-red-100 text-red-800': tenant.status === 'suspended',
-                                                    'bg-yellow-100 text-yellow-800': tenant.status === 'trial',
+                                                    'bg-gray-100 text-gray-800': tenant.status === 'deleted',
                                                 }"
                                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                             >

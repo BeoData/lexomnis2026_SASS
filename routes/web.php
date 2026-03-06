@@ -85,6 +85,7 @@ Route::middleware(['auth'])->group(function () {
     // Plans Management
     Route::prefix('plans')->name('plans.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\PlanController::class, 'index'])->name('index');
+        Route::get('/list', [App\Http\Controllers\Admin\PlanController::class, 'list'])->name('list');
         Route::get('/create', [App\Http\Controllers\Admin\PlanController::class, 'create'])->name('create');
         Route::post('/', [App\Http\Controllers\Admin\PlanController::class, 'store'])->name('store');
         Route::get('/{id}', [App\Http\Controllers\Admin\PlanController::class, 'show'])->name('show');
