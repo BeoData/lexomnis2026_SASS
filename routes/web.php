@@ -19,26 +19,44 @@ Route::post('/register', [App\Http\Controllers\TenantRegistrationController::cla
 Route::get('/verify-email/{token}', [App\Http\Controllers\TenantRegistrationController::class, 'verifyEmail'])->name('tenant.verify-email');
 Route::post('/resend-verification', [App\Http\Controllers\TenantRegistrationController::class, 'resendVerification'])->name('tenant.resend-verification');
 Route::get('/register/success', function () {
-    return \Inertia\Inertia::render('TenantRegistration/Success');
+    $tenantAppUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+    return \Inertia\Inertia::render('TenantRegistration/Success', [
+        'tenantAppUrl' => rtrim($tenantAppUrl, '/'),
+    ]);
 })->name('tenant.register.success');
 
-// Checkout (requires auth)
+// ============================================================
+// CLIENT PORTAL ROUTES (for registered clients/customers)
+// ============================================================
+Route::middleware(['auth', 'client'])->prefix('client')->name('client.')->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\Client\ClientDashboardController::class, 'dashboard'])->name('dashboard');
+    Route::get('/profile', [App\Http\Controllers\Client\ClientDashboardController::class, 'profile'])->name('profile');
+    Route::put('/profile', [App\Http\Controllers\Client\ClientDashboardController::class, 'updateProfile'])->name('profile.update');
+    Route::get('/subscription', [App\Http\Controllers\Client\ClientDashboardController::class, 'subscription'])->name('subscription');
+});
+
+// Checkout (requires auth - available to clients)
 Route::middleware(['auth'])->group(function () {
     Route::get('/checkout/{plan}', [App\Http\Controllers\CheckoutController::class, 'index'])->name('checkout');
     Route::post('/checkout/process', [App\Http\Controllers\CheckoutController::class, 'process'])->name('checkout.process');
     Route::get('/checkout/success', [App\Http\Controllers\CheckoutController::class, 'success'])->name('checkout.success');
     Route::get('/checkout/cancel', [App\Http\Controllers\CheckoutController::class, 'cancel'])->name('checkout.cancel');
 
-    // Subscription Management
+    // Subscription Management (client-facing)
     Route::get('/subscriptions/manage', [App\Http\Controllers\SubscriptionController::class, 'manage'])->name('subscriptions.manage');
     Route::post('/subscriptions/upgrade', [App\Http\Controllers\SubscriptionController::class, 'upgrade'])->name('subscriptions.upgrade');
     Route::post('/subscriptions/cancel', [App\Http\Controllers\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
 });
 
-// Protected routes
+// Authenticated common routes
 Route::middleware(['auth'])->group(function () {
     Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
+});
 
+// ============================================================
+// SUPER ADMIN ROUTES (protected by superadmin middleware)
+// ============================================================
+Route::middleware(['auth', 'superadmin'])->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 
     // Tenant Management
@@ -93,7 +111,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{id}', [App\Http\Controllers\Admin\PlanController::class, 'update'])->name('update');
     });
 
-    // Subscriptions Management
+    // Subscriptions Management (admin view)
     Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\SubscriptionController::class, 'index'])->name('index');
         Route::get('/{id}', [App\Http\Controllers\Admin\SubscriptionController::class, 'show'])->name('show');

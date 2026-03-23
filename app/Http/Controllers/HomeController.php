@@ -10,9 +10,12 @@ class HomeController extends Controller
 {
     public function index(Request $request)
     {
-        // If user is authenticated, redirect to dashboard
+        // If user is authenticated, redirect based on role
         if (Auth::user()) {
-            return redirect()->route('dashboard');
+            if (Auth::user()->isSuperAdmin()) {
+                return redirect()->route('dashboard');
+            }
+            return redirect()->route('client.dashboard');
         }
 
         return Inertia::render('Home/Index');

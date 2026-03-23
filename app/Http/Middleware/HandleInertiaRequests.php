@@ -46,7 +46,14 @@ class HandleInertiaRequests extends Middleware
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'role' => $user->role,
                 ] : null,
+            ],
+            'tenantAppUrl' => rtrim(\App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url'), '/'),
+            'flash' => [
+                'message' => $request->session()->get('message'),
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
             ],
         ];
         

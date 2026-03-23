@@ -19,12 +19,12 @@
                 </p>
                 
                 <div class="flex flex-col gap-4 max-w-sm mx-auto">
-                    <!-- Primarna akcija: Ulazak u samu aplikaciju -->
+                    <!-- Primarna akcija: Ulazak u samu aplikaciju (tenant app - dinamički URL) -->
                     <a
-                        href="http://127.0.0.1:8001/login"
+                        :href="tenantLoginUrl"
                         class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition-all hover:scale-105"
                     >
-                        Uđite u Aplikaciju (8001) →
+                        Uđite u Aplikaciju →
                     </a>
 
                     <div class="flex items-center justify-center my-2 text-gray-400">
@@ -38,7 +38,7 @@
                         :href="route('login')"
                         class="inline-block bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg transition-colors border border-gray-300"
                     >
-                        Upravljaj Profilom i Računima (8000)
+                        Upravljaj Profilom i Računima
                     </Link>
                 </div>
             </div>
@@ -50,6 +50,23 @@
 import PublicLayout from '@/Pages/Layouts/PublicLayout.vue';
 import { Link } from '@inertiajs/vue3';
 import { useRoute } from '@/composables/useRoute';
+import { computed } from 'vue';
 
 const { route } = useRoute();
+
+const props = defineProps({
+    tenantAppUrl: {
+        type: String,
+        default: '',
+    },
+});
+
+// Build tenant login URL dynamically from backend-provided tenantAppUrl
+const tenantLoginUrl = computed(() => {
+    if (props.tenantAppUrl) {
+        return props.tenantAppUrl + '/login';
+    }
+    // Fallback — should never happen if backend is configured correctly
+    return '/login';
+});
 </script>

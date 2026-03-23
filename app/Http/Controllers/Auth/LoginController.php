@@ -15,7 +15,7 @@ class LoginController extends Controller
     public function show()
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return $this->redirectByRole(Auth::user());
         }
 
         return Inertia::render('Auth/Login');
@@ -41,11 +41,23 @@ class LoginController extends Controller
             // Clear any cached user data
             Auth::setUser($user);
 
-            return redirect()->intended(route('dashboard'));
+            return $this->redirectByRole($user);
         }
 
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
         ])->onlyInput('email');
+    }
+
+    /**
+     * Redirect user based on their role
+     */
+    protected function redirectByRole($user)
+    {
+        if ($user->isSuperAdmin()) {
+            return redirect()->route('dashboard');
+        }
+
+        return redirect()->route('client.dashboard');
     }
 }

@@ -140,7 +140,7 @@ class TenantRegistrationController extends Controller
                     [
                         'name' => $validated['name'],
                         'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
-                        // 'role' => 'client', // If you have roles in SASS
+                        'role' => 'client',
                     ]
                 );
 
@@ -151,7 +151,7 @@ class TenantRegistrationController extends Controller
                     if (isset($data['data']['payment_url'])) {
                         return redirect($data['data']['payment_url']);
                     } else {
-                        return redirect('http://127.0.0.1:8001/login');
+                        return redirect()->route('login');
                     }
                 }
             } else {

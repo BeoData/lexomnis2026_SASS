@@ -139,7 +139,7 @@
                             : 'bg-gray-900 hover:bg-gray-800 text-white'"
                         class="block w-full text-center px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg"
                     >
-                        {{ billingPeriod === 'yearly' ? 'Try for Free' : 'Try for Free' }}
+                        {{ planGroup.name.toLowerCase().includes('trial') ? 'Try for Free' : 'Izaberi' }}
                     </Link>
 
                     <!-- Add-ons Available -->
