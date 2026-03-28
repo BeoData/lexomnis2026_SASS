@@ -2,6 +2,8 @@ import axios from 'axios';
 window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+// Ensure cookies (session) are sent with XHR requests from the SPA
+window.axios.defaults.withCredentials = true;
 
 // CSRF token setup and auto-refresh
 const updateCsrfToken = () => {

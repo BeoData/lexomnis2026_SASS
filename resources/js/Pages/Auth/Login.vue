@@ -72,7 +72,7 @@
 
 <script setup>
 import { useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
 const processing = ref(false);
 
@@ -97,5 +97,17 @@ const submit = () => {
         },
     });
 };
+
+onMounted(() => {
+    // Debug helper: will show when /login is mounted in the browser console.
+    // Inspect DOM to see if a global overlay exists: document.querySelectorAll('.fixed.inset-0')
+    try {
+        console.log('Login.vue mounted — URL:', window.location.href);
+        const overlays = document.querySelectorAll('.fixed.inset-0');
+        console.log('Overlay elements count:', overlays.length, overlays);
+    } catch (e) {
+        console.log('Login mount debug failed', e);
+    }
+});
 </script>
 

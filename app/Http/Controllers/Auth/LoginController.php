@@ -41,7 +41,18 @@ class LoginController extends Controller
             // Clear any cached user data
             Auth::setUser($user);
 
-            return $this->redirectByRole($user);
+            // Redirect to the intended URL (if present), otherwise fall back to role-based dashboard.
+            $default = $user->isSuperAdmin() ? route('dashboard') : route('client.dashboard');
+
+            // If the request is an Inertia visit, prefer a full-location redirect so the browser performs
+            // a normal navigation and any session cookies set by this response are applied before the
+            // next page load. This avoids a common SPA timing issue where the XHR follow-up request
+            // doesn't include the newly-set session cookie.
+            if ($request->header('X-Inertia')) {
+                return Inertia::location($default);
+            }
+
+            return redirect()->intended($default);
         }
 
         return back()->withErrors([

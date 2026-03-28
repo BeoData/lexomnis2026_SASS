@@ -17,12 +17,25 @@
                         <button
                             v-if="tenant.status === 'active'"
                             @click="impersonateTenant"
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded flex items-center gap-2"
+                            :disabled="isImpersonating"
+                            :class="[
+                                'bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded flex items-center gap-2',
+                                isImpersonating ? 'opacity-50 cursor-not-allowed' : ''
+                            ]"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-                            </svg>
-                            Uloguj se kao Klijent
+                            <template v-if="!isImpersonating">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                                </svg>
+                            </template>
+                            <template v-else>
+                                <svg class="animate-spin -ml-0.5 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                </svg>
+                            </template>
+                            <span v-if="!isImpersonating">Uloguj se kao Klijent</span>
+                            <span v-else>Prijavljivanje...</span>
                         </button>
                         <Link
                             :href="route('tenants.edit', tenant.id)"
@@ -276,6 +289,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import AuthenticatedLayout from '@/Pages/Layouts/AuthenticatedLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useRoute } from '@/composables/useRoute';
@@ -288,6 +302,8 @@ const props = defineProps({
         required: true,
     },
 });
+
+const isImpersonating = ref(false);
 
 const suspendTenant = () => {
     if (confirm('Are you sure you want to suspend this tenant?')) {
@@ -312,11 +328,18 @@ const activateTenant = () => {
 };
 
 const impersonateTenant = () => {
-    if (confirm('Da li ste sigurni da želite da se ulogujete kao Klijent (Impersonate)?')) {
-        router.post(route('tenants.impersonate', props.tenant.id), {}, {
-            preserveScroll: true,
-        });
-    }
+    isImpersonating.value = true;
+
+    router.post(route('tenants.impersonate', props.tenant.id), {}, {
+        preserveScroll: true,
+        onError: (errors) => {
+            const message = (errors && errors.error) ? errors.error : 'Neuspešna akcija. Proverite detalje.';
+            alert(message);
+        },
+        onFinish: () => {
+            isImpersonating.value = false;
+        }
+    });
 };
 
 // Helper functions

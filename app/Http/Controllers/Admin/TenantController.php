@@ -142,6 +142,20 @@ class TenantController extends Controller
 
         $tenant = $response['data'] ?? [];
 
+        // Ensure tenant users are present for the admin UI (some API responses omit nested users)
+        if (empty($tenant['users']) || !is_array($tenant['users'])) {
+            $usersResponse = $this->apiService->getUsers(['tenant_id' => (int) $id, 'per_page' => 100]);
+            if ($usersResponse['success']) {
+                // If paginated, extract data
+                $usersData = $usersResponse['data'] ?? [];
+                if (is_array($usersData) && isset($usersData['data'])) {
+                    $tenant['users'] = $usersData['data'];
+                } elseif (is_array($usersData)) {
+                    $tenant['users'] = $usersData;
+                }
+            }
+        }
+
         // Load plans if tenant doesn't have subscription
         $plans = [];
         if (empty($tenant['subscription'])) {
@@ -265,6 +279,35 @@ class TenantController extends Controller
 
     public function impersonate(string $id)
     {
+        // Fetch tenant details
+        $tenantResponse = $this->apiService->getTenant((int) $id);
+
+        if (!$tenantResponse['success']) {
+            return back()->withErrors(['error' => $tenantResponse['error'] ?? 'Failed to fetch tenant details']);
+        }
+
+        $tenantData = $tenantResponse['data'] ?? [];
+        
+        // If tenant response doesn't include users, fetch them separately
+        $users = $tenantData['users'] ?? [];
+        if (empty($users) || !is_array($users)) {
+            $usersResponse = $this->apiService->getUsers(['tenant_id' => (int) $id, 'per_page' => 100]);
+            if ($usersResponse['success']) {
+                $usersData = $usersResponse['data'] ?? [];
+                // Extract from paginated response if needed
+                if (is_array($usersData) && isset($usersData['data'])) {
+                    $users = $usersData['data'];
+                } elseif (is_array($usersData)) {
+                    $users = $usersData;
+                }
+            }
+        }
+
+        if (empty($users) || !is_array($users) || count($users) === 0) {
+            return back()->withErrors(['error' => 'Tenant has no active users. Please create a tenant admin user before impersonating.']);
+        }
+
+        // Proceed to request impersonation token from tenant app
         $response = $this->apiService->generateTenantImpersonationToken((int) $id, false);
 
         if (!$response['success']) {
@@ -274,12 +317,10 @@ class TenantController extends Controller
         $impersonateUrl = $response['data']['impersonate_url'] ?? null;
 
         if ($impersonateUrl) {
-            // Include target app base URL since TenantAppApiService doesn't prepend domain to inner responses
-            // Actually config('services.tenant_app.url') is available? 
-            // We can just rely on the API returning the full absolute URL.
+            // Tenant app generated the impersonate URL — redirect browser directly to it
             return \Inertia\Inertia::location($impersonateUrl);
         }
 
-        return back()->with('success', 'Impersonation done successfully but no URL provided.');
+        return back()->withErrors(['error' => 'Impersonation URL not provided by tenant app.']);
     }
 }
