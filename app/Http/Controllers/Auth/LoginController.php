@@ -52,6 +52,11 @@ class LoginController extends Controller
                 return Inertia::location($default);
             }
 
+            // Always force superadmin to superadmin dashboard, regardless of intended URL
+            if ($user->isSuperAdmin()) {
+                return redirect($default);
+            }
+
             return redirect()->intended($default);
         }
 

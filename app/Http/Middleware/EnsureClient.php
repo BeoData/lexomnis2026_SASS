@@ -18,9 +18,12 @@ class EnsureClient
             return redirect()->route('login');
         }
 
-        // Superadmins can also view client pages (for support purposes)
-        // but clients cannot access admin pages
-        if ($request->user()->isClient() || $request->user()->isSuperAdmin()) {
+        // If superadmin tries to access a client route, redirect them to their superadmin dashboard
+        if ($request->user()->isSuperAdmin()) {
+            return redirect()->route('dashboard');
+        }
+
+        if ($request->user()->isClient()) {
             return $next($request);
         }
 
