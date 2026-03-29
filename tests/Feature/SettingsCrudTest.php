@@ -30,8 +30,11 @@ class SettingsCrudTest extends TestCase
             ->get('/settings');
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.settings.index');
-        $response->assertViewHas('groups');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Settings/Index')
+                ->has('groups')
+        );
     }
 
     public function test_it_can_update_settings()

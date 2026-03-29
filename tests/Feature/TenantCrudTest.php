@@ -45,8 +45,11 @@ class TenantCrudTest extends TestCase
             ->get('/tenants');
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.tenants.index');
-        $response->assertViewHas('tenants');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Tenants/Index')
+                ->has('tenants')
+        );
     }
 
     public function test_it_can_display_create_tenant_page()
@@ -55,7 +58,10 @@ class TenantCrudTest extends TestCase
             ->get('/tenants/create');
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.tenants.create');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Tenants/Create')
+        );
     }
 
     public function test_it_can_create_a_new_tenant()
@@ -133,8 +139,11 @@ class TenantCrudTest extends TestCase
             ->get("/tenants/{$tenantId}");
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.tenants.show');
-        $response->assertViewHas('tenant');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Tenants/Show')
+                ->has('tenant')
+        );
     }
 
     public function test_it_can_display_edit_tenant_page()
@@ -155,8 +164,11 @@ class TenantCrudTest extends TestCase
             ->get("/tenants/{$tenantId}/edit");
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.tenants.edit');
-        $response->assertViewHas('tenant');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Tenants/Edit')
+                ->has('tenant')
+        );
     }
 
     public function test_it_can_update_tenant()
