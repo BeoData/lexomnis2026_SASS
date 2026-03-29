@@ -17,7 +17,7 @@ class UserCrudTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create super admin user for testing
         $this->user = User::factory()->create([
             'email' => 'superadmin@lexomnis.com',
@@ -57,16 +57,19 @@ class UserCrudTest extends TestCase
             ->get("/users?tenant_id={$tenantId}");
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.users.index');
-        $response->assertViewHas('users');
-        $response->assertViewHas('tenants');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Users/Index')
+                ->has('users')
+                ->has('tenants')
+        );
     }
 
     public function test_it_can_display_user_details()
     {
         $userId = 1;
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/users/{$userId}*" => Http::response([
@@ -82,15 +85,18 @@ class UserCrudTest extends TestCase
             ->get("/users/{$userId}?tenant_id={$tenantId}");
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.users.show');
-        $response->assertViewHas('user');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Users/Show')
+                ->has('user')
+        );
     }
 
     public function test_it_can_suspend_user()
     {
         $userId = 1;
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/users/{$userId}/suspend" => Http::response([
@@ -109,7 +115,7 @@ class UserCrudTest extends TestCase
     {
         $userId = 1;
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/users/{$userId}/reset-password" => Http::response([
@@ -129,7 +135,7 @@ class UserCrudTest extends TestCase
     {
         $userId = 1;
         $tenantId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/users/{$userId}/impersonate" => Http::response([

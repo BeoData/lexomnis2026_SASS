@@ -20,8 +20,10 @@ class DashboardController extends Controller
         // Safety check: Only SuperAdmin should be on port 8000 Dashboard
         // You can change 'admin@lexomnis.com' to your actual admin email
         $user = auth()->user();
-        if ($user->email !== 'admin@lexomnis.com' && !str_ends_with($user->email, '@lexomnis.rs')) {
-            return redirect('http://127.0.0.1:8001/login');
+        if ($user->email !== 'admin@lexomnis.com' && 
+            $user->email !== 'superadmin@lexomnis.com' && 
+            !str_ends_with($user->email, '@lexomnis.rs')) {
+            abort(403, 'Unauthorized access to Super Admin dashboard.');
         }
 
         $data = $this->apiService->getDashboardData();

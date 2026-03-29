@@ -20,12 +20,12 @@
                 
                 <div class="flex flex-col gap-4 max-w-sm mx-auto">
                     <!-- Primarna akcija: Ulazak u samu aplikaciju -->
-                    <a
-                        href="http://127.0.0.1:8001/login"
+                    <Link
+                        :href="route('login')"
                         class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition-all hover:scale-105"
                     >
                         Uđite u Aplikaciju (8001) →
-                    </a>
+                    </Link>
 
                     <div class="flex items-center justify-center my-2 text-gray-400">
                         <div class="border-t border-gray-200 flex-grow mr-3"></div>

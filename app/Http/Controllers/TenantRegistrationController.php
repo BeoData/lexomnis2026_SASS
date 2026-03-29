@@ -151,7 +151,7 @@ class TenantRegistrationController extends Controller
                     if (isset($data['data']['payment_url'])) {
                         return redirect($data['data']['payment_url']);
                     } else {
-                        return redirect('http://127.0.0.1:8001/login');
+                        return redirect()->route('login');
                     }
                 }
             } else {

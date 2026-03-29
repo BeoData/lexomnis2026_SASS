@@ -17,7 +17,7 @@ class PlanCrudTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create super admin user for testing
         $this->user = User::factory()->create([
             'email' => 'superadmin@lexomnis.com',
@@ -46,8 +46,11 @@ class PlanCrudTest extends TestCase
             ->get('/plans');
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.plans.index');
-        $response->assertViewHas('plans');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Plans/Index')
+                ->has('plans')
+        );
     }
 
     public function test_it_can_display_create_plan_page()
@@ -56,7 +59,10 @@ class PlanCrudTest extends TestCase
             ->get('/plans/create');
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.plans.create');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Plans/Create')
+        );
     }
 
     public function test_it_can_create_a_new_plan()
@@ -113,7 +119,7 @@ class PlanCrudTest extends TestCase
     public function test_it_can_display_plan_details()
     {
         $planId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/plans/{$planId}" => Http::response([
@@ -129,14 +135,17 @@ class PlanCrudTest extends TestCase
             ->get("/plans/{$planId}");
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.plans.show');
-        $response->assertViewHas('plan');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Plans/Show')
+                ->has('plan')
+        );
     }
 
     public function test_it_can_display_edit_plan_page()
     {
         $planId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/plans/{$planId}" => Http::response([
@@ -152,14 +161,17 @@ class PlanCrudTest extends TestCase
             ->get("/plans/{$planId}/edit");
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.plans.edit');
-        $response->assertViewHas('plan');
+        $response->assertInertia(
+            fn(\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Plans/Edit')
+                ->has('plan')
+        );
     }
 
     public function test_it_can_update_plan()
     {
         $planId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/plans/{$planId}" => Http::response([

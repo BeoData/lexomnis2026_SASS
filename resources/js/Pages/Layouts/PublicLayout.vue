@@ -25,12 +25,12 @@
                         >
                             Features
                         </Link>
-                        <a
-                            href="http://127.0.0.1:8001/login"
+                        <Link
+                            :href="route('login')"
                             class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                         >
                             Log In
-                        </a>
+                        </Link>
                         <Link
                             :href="route('tenant.register') + '?cta=signup-header'"
                             class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md hover:shadow-lg"
@@ -68,13 +68,13 @@
                         >
                             Features
                         </Link>
-                        <a
-                            href="http://127.0.0.1:8001/login"
+                        <Link
+                            :href="route('login')"
                             @click="mobileMenuOpen = false"
                             class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                         >
                             Log In
-                        </a>
+                        </Link>
                         <Link
                             :href="route('tenant.register') + '?cta=signup-header'"
                             @click="mobileMenuOpen = false"
