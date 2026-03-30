@@ -303,11 +303,7 @@ class TenantController extends Controller
             }
         }
 
-        if (empty($users) || !is_array($users) || count($users) === 0) {
-            return back()->withErrors(['error' => 'Tenant has no active users. Please create a tenant admin user before impersonating.']);
-        }
-
-        // Proceed to request impersonation token from tenant app
+        // Proceed to request impersonation token from tenant app directly
         $response = $this->apiService->generateTenantImpersonationToken((int) $id, false);
 
         if (!$response['success']) {

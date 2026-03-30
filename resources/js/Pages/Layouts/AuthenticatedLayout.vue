@@ -1,6 +1,6 @@
 <template>
     <div class="min-h-screen bg-gray-50">
-        // Ultra-Premium Glassmorphism Navigation
+        <!-- Ultra-Premium Glassmorphism Navigation -->
         <nav class="sticky top-0 z-50 bg-blue-700 border-b border-blue-800 shadow-2xl">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-20">
