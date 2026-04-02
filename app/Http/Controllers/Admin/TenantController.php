@@ -279,44 +279,23 @@ class TenantController extends Controller
 
     public function impersonate(string $id)
     {
-        // Fetch tenant details
-        $tenantResponse = $this->apiService->getTenant((int) $id);
-
-        if (!$tenantResponse['success']) {
-            return back()->withErrors(['error' => $tenantResponse['error'] ?? 'Failed to fetch tenant details']);
-        }
-
-        $tenantData = $tenantResponse['data'] ?? [];
-        
-        // If tenant response doesn't include users, fetch them separately
-        $users = $tenantData['users'] ?? [];
-        if (empty($users) || !is_array($users)) {
-            $usersResponse = $this->apiService->getUsers(['tenant_id' => (int) $id, 'per_page' => 100]);
-            if ($usersResponse['success']) {
-                $usersData = $usersResponse['data'] ?? [];
-                // Extract from paginated response if needed
-                if (is_array($usersData) && isset($usersData['data'])) {
-                    $users = $usersData['data'];
-                } elseif (is_array($usersData)) {
-                    $users = $usersData;
-                }
-            }
-        }
-
-        // Proceed to request impersonation token from tenant app directly
+        // Request impersonation token from tenant app
         $response = $this->apiService->generateTenantImpersonationToken((int) $id, false);
 
         if (!$response['success']) {
-            return back()->withErrors(['error' => $response['error'] ?? 'Failed to generate impersonation token']);
+            return response()->json(['error' => $response['error'] ?? 'Failed to generate impersonation token'], 400);
         }
 
         $impersonateUrl = $response['data']['impersonate_url'] ?? null;
 
         if ($impersonateUrl) {
-            // Tenant app generated the impersonate URL — redirect browser directly to it
-            return \Inertia\Inertia::location($impersonateUrl);
+            // Return the impersonate URL as JSON so client can open it in new tab
+            return response()->json([
+                'impersonate_url' => $impersonateUrl,
+                'success' => true
+            ]);
         }
 
-        return back()->withErrors(['error' => 'Impersonation URL not provided by tenant app.']);
+        return response()->json(['error' => 'Impersonation URL not provided by tenant app.'], 400);
     }
 }

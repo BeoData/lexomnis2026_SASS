@@ -1,0 +1,16 @@
+# PRIME DIRECTIVE: Everything Claude Code (ECC) System
+
+Svi zadaci moraju se pridržavati ECC standarda definisanih u `.claude/rules/` i `.claude/skills/`.
+
+## OSNOVNA PRAVILA (NEZAOBILAZNA):
+1. **Plan -> TDD -> Review**: Svaka promena mora početi planom, imati testove i proći interni review.
+2. **Immutability (PHP/JS)**: UVEK praviti nove objekte/nizove, nikada ne menjati postojeće (no side effects).
+3. **80%+ Test Coverage**: Svaki novi kod mora imati testove (Unit/Feature). 
+4. **Security-First**: Skeniranje tajni, validacija inputa i zaštita od SQLi/XSS/CSRF su obavezni.
+5. **Small Focused Files**: Fajlovi su obično 200-400 linija (maksimalno 800). Funkcije <50 linija.
+
+## Laravel/PHP Standardi:
+- **Thin Controllers**: Logika ide u Services ili Actions.
+- **Form Requests**: Obavezna validacija pre kontrolera.
+- **API Resources**: Za sve API odgovore.
+- **RefreshDatabase**: Obavezna upotreba u testovima koji diraju bazu.

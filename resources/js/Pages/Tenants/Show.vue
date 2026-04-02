@@ -327,19 +327,41 @@ const activateTenant = () => {
     }
 };
 
-const impersonateTenant = () => {
+const impersonateTenant = async () => {
     isImpersonating.value = true;
 
-    router.post(route('tenants.impersonate', props.tenant.id), {}, {
-        preserveScroll: true,
-        onError: (errors) => {
-            const message = (errors && errors.error) ? errors.error : 'Neuspešna akcija. Proverite detalje.';
+    try {
+        const response = await fetch(route('tenants.impersonate', props.tenant.id), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            const message = (errorData && errorData.error) ? errorData.error : 'Neuspešna akcija. Proverite detalje.';
             alert(message);
-        },
-        onFinish: () => {
+            isImpersonating.value = false;
+            return;
+        }
+
+        const data = await response.json();
+        
+        if (data.impersonate_url) {
+            // Open impersonate URL in new tab
+            window.open(data.impersonate_url, '_blank');
+            isImpersonating.value = false;
+        } else {
+            alert('Impersonation URL not provided');
             isImpersonating.value = false;
         }
-    });
+    } catch (error) {
+        console.error('Impersonation error:', error);
+        alert('Error during impersonation: ' + error.message);
+        isImpersonating.value = false;
+    }
 };
 
 // Helper functions
