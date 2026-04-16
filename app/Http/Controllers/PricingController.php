@@ -17,10 +17,12 @@ class PricingController extends Controller
 
     public function index(Request $request)
     {
-        // Get plans from Core App API
-        // Note: This should call the public /api/subscriptions/plans endpoint
-        // For now, we'll use the admin endpoint, but in production this should be public
-        $response = $this->apiService->getPlans(['is_active' => true]);
+        // Get active customer-facing plans from the Core App API.
+        // This reads the real plan packages, not a hardcoded list.
+        $response = $this->apiService->getPlans([
+            'is_active' => true,
+            'is_visible_to_customers' => true,
+        ]);
         
         $plans = $response['success'] ? $response['data'] : [];
 
@@ -29,7 +31,7 @@ class PricingController extends Controller
             $plans = $plans['data'];
         }
 
-        // Group plans by plan_key for Clio-style display
+        // Group plans by plan_key for tiered annual/monthly display
         $groupedPlans = [];
         if (is_array($plans) && !empty($plans)) {
             $grouped = collect($plans)->groupBy('plan_key')->map(function ($group, $planKey) {

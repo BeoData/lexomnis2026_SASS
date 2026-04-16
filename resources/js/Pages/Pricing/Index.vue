@@ -131,12 +131,21 @@
                         </ul>
                     </div>
 
+                    <p v-if="!isPlanAvailableForPeriod(planGroup)" class="text-red-500 text-sm mb-4">
+                        {{ billingPeriod === 'yearly' ? 'Annual pricing is not available for this plan yet.' : 'Monthly pricing is not available for this plan yet.' }}
+                    </p>
+
                     <!-- CTA Button -->
                     <Link
-                        :href="`/checkout/${currentPlan(planGroup)?.id}?period=${billingPeriod}`"
-                        :class="planGroup.metadata?.popular 
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                            : 'bg-gray-900 hover:bg-gray-800 text-white'"
+                        :href="isPlanAvailableForPeriod(planGroup) 
+                            ? ($page.props.auth?.user 
+                                ? `/checkout/${currentPlan(planGroup).id}?period=${billingPeriod}` 
+                                : `/register?registration_type=${planGroup.name.toLowerCase().includes('trial') ? 'trial' : 'paid'}&plan_id=${currentPlan(planGroup).id}&billing_period=${billingPeriod}`) 
+                            : '#'"
+                        :class="[
+                            planGroup.metadata?.popular ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-900 hover:bg-gray-800 text-white',
+                            !isPlanAvailableForPeriod(planGroup) ? 'opacity-50 cursor-not-allowed pointer-events-none bg-gray-400 hover:bg-gray-400' : ''
+                        ]"
                         class="block w-full text-center px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg"
                     >
                         {{ planGroup.name.toLowerCase().includes('trial') ? 'Try for Free' : 'Izaberi' }}
@@ -197,19 +206,18 @@ const props = defineProps({
 const billingPeriod = ref('monthly');
 
 const currentPlan = (planGroup) => {
-    return billingPeriod.value === 'monthly' 
-        ? planGroup.monthly 
+    return billingPeriod.value === 'monthly'
+        ? planGroup.monthly
         : planGroup.yearly;
 };
 
 const currentPrice = (planGroup) => {
     const plan = currentPlan(planGroup);
-    if (!plan) return '0';
-    
-    if (billingPeriod.value === 'yearly') {
-        return parseFloat(plan.price).toFixed(2);
-    }
-    return parseFloat(plan.price).toFixed(2);
+    return plan ? parseFloat(plan.price).toFixed(2) : '0';
+};
+
+const isPlanAvailableForPeriod = (planGroup) => {
+    return !!currentPlan(planGroup);
 };
 
 const getFeatures = (planGroup) => {

@@ -21,8 +21,12 @@ class TenantRegistrationController extends Controller
      */
     public function index(Request $request)
     {
-        // Get plans from API
-        $response = $this->apiService->getPlans(['is_active' => true]);
+        // Get active customer-facing plans from API.
+        // Use the real plan packages returned by the tenant app.
+        $response = $this->apiService->getPlans([
+            'is_active' => true,
+            'is_visible_to_customers' => true,
+        ]);
 
         $plans = $response['success'] ? ($response['data'] ?? []) : [];
 

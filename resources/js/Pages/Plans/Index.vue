@@ -2,8 +2,26 @@
     <AuthenticatedLayout>
         <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="px-4 py-6 sm:px-0">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-bold text-gray-900">Plans</h1>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Plans</h1>
+                    </div>
+                    <div class="inline-flex rounded-lg border-2 border-gray-200 bg-white p-1 shadow-sm">
+                        <Link
+                            :href="route('plans.index', { billing_period: 'monthly' })"
+                            :class="billingPeriod === 'monthly' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'"
+                            class="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200"
+                        >
+                            Monthly
+                        </Link>
+                        <Link
+                            :href="route('plans.index', { billing_period: 'yearly' })"
+                            :class="billingPeriod === 'yearly' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'"
+                            class="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200"
+                        >
+                            Yearly
+                        </Link>
+                    </div>
                     <Link
                         :href="route('plans.create')"
                         class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
@@ -94,6 +112,10 @@ defineProps({
     filters: {
         type: Object,
         default: () => ({}),
+    },
+    billingPeriod: {
+        type: String,
+        default: 'monthly',
     },
 });
 </script>

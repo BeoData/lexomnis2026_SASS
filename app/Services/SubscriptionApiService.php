@@ -68,9 +68,9 @@ class SubscriptionApiService
         }
     }
 
-    public function getPlans(): array
+    public function getPlans(array $filters = []): array
     {
-        return $this->request('GET', 'plans');
+        return $this->request('GET', 'plans', $filters);
     }
 
     public function createCheckout(array $data): array
