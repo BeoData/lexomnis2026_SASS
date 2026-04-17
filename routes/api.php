@@ -22,3 +22,6 @@ Route::prefix('admin')->middleware(['api'])->group(function () {
     });
 
 });
+
+Route::post('webhooks/stripe', [App\Http\Controllers\Api\Webhooks\StripeWebhookController::class, 'handle']);
+Route::post('webhooks/paypal', [App\Http\Controllers\Api\Webhooks\PayPalWebhookController::class, 'handle']);

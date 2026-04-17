@@ -45,6 +45,9 @@ class CheckoutController extends Controller
             'cancel_url' => 'nullable|url',
         ]);
 
+        $validated['success_url'] = $validated['success_url'] ?? route('checkout.success');
+        $validated['cancel_url'] = $validated['cancel_url'] ?? route('checkout.cancel');
+
         $response = $this->apiService->createCheckout($validated);
 
         if (!$response['success']) {

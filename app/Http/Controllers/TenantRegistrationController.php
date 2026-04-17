@@ -52,8 +52,23 @@ class TenantRegistrationController extends Controller
             $groupedPlans = $grouped;
         }
 
+        $initialRegistrationType = in_array($request->query('registration_type'), ['trial', 'paid'])
+            ? $request->query('registration_type')
+            : 'trial';
+
+        $initialBillingPeriod = in_array($request->query('billing_period'), ['monthly', 'yearly'])
+            ? $request->query('billing_period')
+            : 'monthly';
+
+        $initialPlanId = $request->query('plan_id');
+        $initialPlanId = is_numeric($initialPlanId) ? (int)$initialPlanId : null;
+
         return Inertia::render('TenantRegistration/Register', [
             'groupedPlans' => $groupedPlans,
+            'initial_registration_type' => $initialRegistrationType,
+            'initial_billing_period' => $initialBillingPeriod,
+            'initial_plan_id' => $initialPlanId,
+            'paypal_enabled' => !empty(config('services.paypal.client_id')) && !empty(config('services.paypal.client_secret')),
         ]);
     }
 
@@ -84,6 +99,9 @@ class TenantRegistrationController extends Controller
             'trial_days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'payment_method' => ['required_if:registration_type,paid', 'nullable', 'in:stripe,paypal'],
         ]);
+
+        $validated['success_url'] = route('tenant.register.success');
+        $validated['cancel_url'] = route('tenant.register');
 
         Log::debug('TenantRegistrationController: Validation passed', [
             'email' => $validated['email'] ?? null,
@@ -152,11 +170,15 @@ class TenantRegistrationController extends Controller
                     return redirect()->route('tenant.register.success')
                         ->with('message', 'Registracija je uspešna! Vaš nalog za plaćanja i radno okruženje su kreirani.');
                 } else {
-                    if (isset($data['data']['payment_url'])) {
-                        return redirect($data['data']['payment_url']);
-                    } else {
-                        return redirect()->route('login');
+                    $paymentUrl = $data['data']['payment_url'] ?? $data['checkout_url'] ?? $data['data']['checkout_url'] ?? null;
+
+                    if ($paymentUrl) {
+                        return redirect($paymentUrl);
                     }
+
+                    return back()->withErrors([
+                        'error' => 'Registracija je uspešna, ali došlo je do greške pri inicijalizaciji plaćanja. Molimo pokušajte ponovo ili kontaktirajte podršku.',
+                    ])->withInput();
                 }
             } else {
                 return back()->withErrors([

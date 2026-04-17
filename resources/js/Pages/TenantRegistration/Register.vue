@@ -191,54 +191,105 @@
                                 </div>
                             </div>
 
-                            <!-- Plan Selection (shown when "Select Plan" is chosen) -->
-                            <div v-if="subscriptionType === 'paid'">
-                                <!-- Billing Period Tabs -->
-                                <div class="flex space-x-2 mb-6 border-b">
-                                    <button
-                                        type="button"
-                                        @click="selectedBillingPeriod = 'monthly'"
-                                        :class="{
-                                            'border-b-2 border-blue-600 text-blue-600': selectedBillingPeriod === 'monthly',
-                                            'text-gray-500': selectedBillingPeriod !== 'monthly'
-                                        }"
-                                        class="px-4 py-2 font-medium"
-                                    >
-                                        Mesečno
-                                    </button>
-                                    <button
-                                        type="button"
-                                        @click="selectedBillingPeriod = 'yearly'"
-                                        :class="{
-                                            'border-b-2 border-blue-600 text-blue-600': selectedBillingPeriod === 'yearly',
-                                            'text-gray-500': selectedBillingPeriod !== 'yearly'
-                                        }"
-                                        class="px-4 py-2 font-medium"
-                                    >
-                                        Godišnje
-                                    </button>
+                            <!-- Plan Selection -->
+                            <div>
+                                <div class="mb-4 text-sm text-gray-600">
+                                    {{ subscriptionType === 'trial'
+                                        ? 'Možete ostaviti podrazumevani besplatni trial. Planovi će se prikazati samo kada izaberete plaćenu opciju.'
+                                        : 'Odaberite plan koji želite da aktivirate odmah.'
+                                    }}
                                 </div>
 
-                                <!-- Plans Grid -->
-                                <div v-if="loadingPlans" class="text-center py-8">
-                                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                </div>
-                                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <PlanCard
-                                        v-for="planGroup in groupedPlans"
-                                        :key="planGroup.plan_key"
-                                        :plan-group="planGroup"
-                                        :selected-billing-period="selectedBillingPeriod"
-                                        :is-selected="selectedPlan?.plan_key === planGroup.plan_key"
-                                        @select="selectPlan"
-                                    />
-                                </div>
-                                <div v-if="!loadingPlans && groupedPlans.length === 0" class="text-center py-8 text-gray-500">
-                                    Nema dostupnih planova
-                                </div>
-                                <div v-if="subscriptionType === 'paid' && !selectedPlan" class="mt-4 text-sm text-red-600">
-                                    Molimo izaberite plan
-                                </div>
+                                <template v-if="subscriptionType === 'paid'">
+                                    <!-- Billing Period Tabs -->
+                                    <div class="flex space-x-2 mb-6 border-b">
+                                        <button
+                                            type="button"
+                                            @click="selectedBillingPeriod = 'monthly'"
+                                            :class="{
+                                                'border-b-2 border-blue-600 text-blue-600': selectedBillingPeriod === 'monthly',
+                                                'text-gray-500': selectedBillingPeriod !== 'monthly'
+                                            }"
+                                            class="px-4 py-2 font-medium"
+                                        >
+                                            Mesečno
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="selectedBillingPeriod = 'yearly'"
+                                            :class="{
+                                                'border-b-2 border-blue-600 text-blue-600': selectedBillingPeriod === 'yearly',
+                                                'text-gray-500': selectedBillingPeriod !== 'yearly'
+                                            }"
+                                            class="px-4 py-2 font-medium"
+                                        >
+                                            Godišnje
+                                        </button>
+                                    </div>
+
+                                    <!-- Plans Grid -->
+                                    <div v-if="loadingPlans" class="text-center py-8">
+                                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    </div>
+                                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <PlanCard
+                                            v-for="planGroup in groupedPlans"
+                                            :key="planGroup.plan_key"
+                                            :plan-group="planGroup"
+                                            :selected-billing-period="selectedBillingPeriod"
+                                            :is-selected="selectedPlan?.plan_key === planGroup.plan_key"
+                                            @select="selectPlan"
+                                        />
+                                    </div>
+                                    <div v-if="!loadingPlans && groupedPlans.length === 0" class="text-center py-8 text-gray-500">
+                                        Nema dostupnih planova
+                                    </div>
+                                    <div v-if="!selectedPlan" class="mt-4 text-sm text-red-600">
+                                        Molimo izaberite plan
+                                    </div>
+
+                                    <div class="mt-8 border-t pt-6">
+                                        <h3 class="text-xl font-semibold text-gray-900 mb-4">Način plaćanja</h3>
+                                        <div class="grid grid-cols-1 gap-4">
+                                            <label class="flex items-center p-4 border rounded-lg cursor-pointer transition-colors"
+                                                   :class="form.payment_method === 'stripe'
+                                                       ? 'border-blue-500 bg-blue-50'
+                                                       : 'border-gray-200 hover:border-gray-300'">
+                                                <input
+                                                    type="radio"
+                                                    v-model="form.payment_method"
+                                                    value="stripe"
+                                                    class="mr-3"
+                                                />
+                                                <div>
+                                                    <span class="font-medium text-gray-900">Stripe</span>
+                                                    <p class="text-sm text-gray-600">Plaćanje karticom putem Stripe-a</p>
+                                                </div>
+                                            </label>
+                                            <label v-if="paypalEnabled" class="flex items-center p-4 border rounded-lg cursor-pointer transition-colors"
+                                                   :class="form.payment_method === 'paypal'
+                                                       ? 'border-blue-500 bg-blue-50'
+                                                       : 'border-gray-200 hover:border-gray-300'">
+                                                <input
+                                                    type="radio"
+                                                    v-model="form.payment_method"
+                                                    value="paypal"
+                                                    class="mr-3"
+                                                />
+                                                <div>
+                                                    <span class="font-medium text-gray-900">PayPal</span>
+                                                    <p class="text-sm text-gray-600">Plaćanje preko PayPal naloga</p>
+                                                </div>
+                                            </label>
+                                            <div v-else class="text-sm text-gray-500">
+                                                PayPal nije dostupan trenutno. Koristite Stripe ili konfigurirajte PayPal u .env.
+                                            </div>
+                                        </div>
+                                        <p class="mt-4 text-sm text-gray-500">
+                                            Bićete preusmereni na bezbednu stranu za plaćanje nakon potvrde registracije.
+                                        </p>
+                                    </div>
+                                </template>
                             </div>
                         </div>
 
@@ -268,7 +319,7 @@
 <script setup>
 import PublicLayout from '@/Pages/Layouts/PublicLayout.vue';
 import { useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import PlanCard from '@/Components/PlanCard.vue';
 import { useRoute } from '@/composables/useRoute';
 
@@ -283,13 +334,34 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    initial_registration_type: {
+        type: String,
+        default: 'trial',
+    },
+    initial_billing_period: {
+        type: String,
+        default: 'monthly',
+    },
+    initial_plan_id: {
+        type: [Number, String],
+        default: null,
+    },
+    paypal_enabled: {
+        type: Boolean,
+        default: false,
+    },
 });
 
-const subscriptionType = ref('trial');
-const selectedBillingPeriod = ref('monthly');
+const subscriptionType = ref(props.initial_registration_type || 'trial');
+const selectedBillingPeriod = ref(
+    ['monthly', 'yearly'].includes(props.initial_billing_period)
+        ? props.initial_billing_period
+        : 'monthly'
+);
 const selectedPlan = ref(null);
 const groupedPlans = ref(props.groupedPlans || []);
 const loadingPlans = ref(false);
+const paypalEnabled = ref(props.paypal_enabled ?? false);
 
 const form = useForm({
     first_name: '',
@@ -308,17 +380,67 @@ const form = useForm({
     payment_method: 'stripe',
 });
 
-const selectPlan = (planGroup) => {
-    selectedPlan.value = planGroup;
-    const plan = selectedBillingPeriod.value === 'monthly' 
-        ? planGroup.monthly 
-        : planGroup.yearly;
-    
+const updateSelectedPlan = () => {
+    if (!selectedPlan.value) {
+        return;
+    }
+
+    const plan = selectedBillingPeriod.value === 'monthly'
+        ? selectedPlan.value.monthly
+        : selectedPlan.value.yearly;
+
     if (plan) {
         form.plan_id = plan.id;
         form.billing_period = plan.billing_period;
     }
 };
+
+const selectPlan = (planGroup) => {
+    selectedPlan.value = planGroup;
+    updateSelectedPlan();
+};
+
+watch(selectedBillingPeriod, () => {
+    updateSelectedPlan();
+});
+
+watch(subscriptionType, (newValue) => {
+    if (newValue === 'trial') {
+        selectedPlan.value = null;
+        form.plan_id = null;
+        form.billing_period = null;
+    } else {
+        updateSelectedPlan();
+    }
+});
+
+onMounted(() => {
+    if (props.initial_plan_id) {
+        const planId = Number(props.initial_plan_id);
+        const planGroup = groupedPlans.value.find((group) => {
+            return (group.monthly?.id === planId) || (group.yearly?.id === planId);
+        });
+
+        if (planGroup) {
+            selectedPlan.value = planGroup;
+            const plan = selectedBillingPeriod.value === 'monthly'
+                ? planGroup.monthly
+                : planGroup.yearly;
+
+            if (plan && plan.id === planId) {
+                form.plan_id = plan.id;
+                form.billing_period = plan.billing_period;
+            } else {
+                const fallbackPlan = planGroup.monthly || planGroup.yearly;
+                if (fallbackPlan) {
+                    form.plan_id = fallbackPlan.id;
+                    form.billing_period = fallbackPlan.billing_period;
+                    selectedBillingPeriod.value = fallbackPlan.billing_period;
+                }
+            }
+        }
+    }
+});
 
 const submit = () => {
     form.registration_type = subscriptionType.value;
@@ -330,7 +452,11 @@ const submit = () => {
     // Combine first_name and last_name into name for backend
     form.name = `${form.first_name} ${form.last_name}`.trim();
 
-    // Use route function directly - ensure it's called in the right scope
+    if (subscriptionType.value === 'trial' && !selectedPlan.value) {
+        form.plan_id = null;
+        form.billing_period = null;
+    }
+
     const targetRoute = route('tenant.register.store');
     
     form.post(targetRoute, {

@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+            'api/webhooks/stripe',
+            'api/webhooks/paypal',
+        ]);
+
         $middleware->alias([
             'superadmin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'client' => \App\Http\Middleware\EnsureClient::class,

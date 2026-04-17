@@ -24,6 +24,10 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
+    stripeKey: {
+        type: String,
+        required: true,
+    },
     planId: {
         type: Number,
         required: true,
@@ -53,11 +57,8 @@ onMounted(async () => {
 });
 
 const initializeStripe = () => {
-    // Initialize Stripe with public key
-    // In production, this should come from environment/config
-    const stripeKey = 'pk_test_...'; // Replace with actual Stripe public key
-    
-    stripe = window.Stripe(stripeKey);
+    // Initialize Stripe with public key from props
+    stripe = window.Stripe(props.stripeKey);
     const elements = stripe.elements();
     
     cardElement = elements.create('card', {

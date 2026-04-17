@@ -49,6 +49,7 @@ class HandleInertiaRequests extends Middleware
                     'role' => $user->role,
                 ] : null,
             ],
+            'stripePublicKey' => config('services.stripe.key'),
             'tenantAppUrl' => rtrim(\App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url'), '/'),
             'flash' => [
                 'message' => $request->session()->get('message'),
