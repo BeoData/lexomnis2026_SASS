@@ -60,7 +60,7 @@ class CheckoutController extends Controller
         $checkoutData = $response['data']['data'] ?? $response['data'] ?? [];
         
         if (isset($checkoutData['checkout_url'])) {
-            return redirect($checkoutData['checkout_url']);
+            return \Inertia\Inertia::location($checkoutData['checkout_url']);
         }
 
         return back()->with('checkout_data', $checkoutData);

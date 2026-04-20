@@ -154,7 +154,7 @@ class TenantRegistrationController extends Controller
                 'error' => $data['error'] ?? null
             ]);
 
-            if ($data['success'] ?? false) {
+            if ($response->successful() && ($data['success'] ?? false)) {
                 // 1. Create user in SASS database (for billing, profile, upgrades)
                 // This user is NOT a SuperAdmin, just a client.
                 \App\Models\User::updateOrCreate(
@@ -173,7 +173,8 @@ class TenantRegistrationController extends Controller
                     $paymentUrl = $data['data']['payment_url'] ?? $data['checkout_url'] ?? $data['data']['checkout_url'] ?? null;
 
                     if ($paymentUrl) {
-                        return redirect($paymentUrl);
+                        // For external URLs like Stripe checkout, use Inertia::location() to avoid CORS issues
+                        return \Inertia\Inertia::location($paymentUrl);
                     }
 
                     return back()->withErrors([
@@ -181,8 +182,14 @@ class TenantRegistrationController extends Controller
                     ])->withInput();
                 }
             } else {
+                // Handle validation errors from Core App (422)
+                if ($response->status() === 422) {
+                    $errors = $data['errors'] ?? [];
+                    return back()->withErrors($errors)->withInput();
+                }
+
                 return back()->withErrors([
-                    'error' => $data['error'] ?? 'Došlo je do greške prilikom registracije.',
+                    'error' => $data['error'] ?? $data['message'] ?? 'Došlo je do greške prilikom registracije.',
                 ])->withInput();
             }
         } catch (\Illuminate\Http\Client\RequestException $e) {
