@@ -71,6 +71,25 @@ class CheckoutController extends Controller
         return Inertia::render('Checkout/Success');
     }
 
+    /**
+     * Proxy Stripe session confirmation to the Core App API.
+     * Called from the Success page via axios.
+     */
+    public function confirm(Request $request)
+    {
+        $sessionId = $request->input('session_id');
+
+        if (!$sessionId) {
+            return response()->json(['success' => false, 'error' => 'Missing session_id'], 422);
+        }
+
+        // Delegate to Core App — TenantAppApiService handles auth token + retry
+        $apiService = app(\App\Services\TenantAppApiService::class);
+        $result = $apiService->confirmStripeCheckoutSession($sessionId);
+
+        return response()->json($result);
+    }
+
     public function cancel(Request $request)
     {
         return Inertia::render('Checkout/Cancel');

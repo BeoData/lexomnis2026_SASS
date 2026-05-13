@@ -1,8 +1,11 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\TenantRegistrationController;
+use App\Services\TenantAppApiService;
 
 // Public routes
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
@@ -18,12 +21,7 @@ Route::get('/register', [App\Http\Controllers\TenantRegistrationController::clas
 Route::post('/register', [App\Http\Controllers\TenantRegistrationController::class, 'store'])->name('tenant.register.store');
 Route::get('/verify-email/{token}', [App\Http\Controllers\TenantRegistrationController::class, 'verifyEmail'])->name('tenant.verify-email');
 Route::post('/resend-verification', [App\Http\Controllers\TenantRegistrationController::class, 'resendVerification'])->name('tenant.resend-verification');
-Route::get('/register/success', function () {
-    $tenantAppUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
-    return \Inertia\Inertia::render('TenantRegistration/Success', [
-        'tenantAppUrl' => rtrim($tenantAppUrl, '/'),
-    ]);
-})->name('tenant.register.success');
+Route::get('/register/success', [TenantRegistrationController::class, 'success'])->name('tenant.register.success');
 
 // ============================================================
 // CLIENT PORTAL ROUTES (for registered clients/customers)
@@ -39,6 +37,7 @@ Route::middleware(['auth', 'client'])->prefix('client')->name('client.')->group(
 Route::middleware(['auth'])->group(function () {
     Route::get('/checkout/{plan}', [App\Http\Controllers\CheckoutController::class, 'index'])->name('checkout');
     Route::post('/checkout/process', [App\Http\Controllers\CheckoutController::class, 'process'])->name('checkout.process');
+    Route::post('/checkout/confirm', [App\Http\Controllers\CheckoutController::class, 'confirm'])->name('checkout.confirm');
     Route::get('/checkout/success', [App\Http\Controllers\CheckoutController::class, 'success'])->name('checkout.success');
     Route::get('/checkout/cancel', [App\Http\Controllers\CheckoutController::class, 'cancel'])->name('checkout.cancel');
 

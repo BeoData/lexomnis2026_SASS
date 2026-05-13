@@ -256,6 +256,11 @@ class TenantAppApiService
         return $this->request('DELETE', "tenants/{$id}");
     }
 
+    public function confirmStripeCheckoutSession(string $sessionId): array
+    {
+        return $this->request('GET', "stripe/checkout/confirm", ['session_id' => $sessionId]);
+    }
+
     // User Management
     public function getUsers(array $filters = []): array
     {
@@ -371,6 +376,21 @@ class TenantAppApiService
     public function getPayment(int $id): array
     {
         return $this->request('GET', "payments/{$id}");
+    }
+
+    public function getPaymentsByTenant(int $tenantId, array $filters = []): array
+    {
+        return $this->request('GET', 'payments', array_merge(['tenant_id' => $tenantId], $filters));
+    }
+
+    public function getPaymentsBySubscription(int $subscriptionId, array $filters = []): array
+    {
+        return $this->request('GET', 'payments/transactions', ['subscription_id' => $subscriptionId]);
+    }
+
+    public function getPaymentTransactionsByTenant(int $tenantId, array $filters = []): array
+    {
+        return $this->request('GET', 'payments/transactions', array_merge(['tenant_id' => $tenantId], $filters));
     }
 
     // Feature Flags

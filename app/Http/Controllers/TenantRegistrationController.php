@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Services\TenantAppApiService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class TenantRegistrationController extends Controller
 {
@@ -118,6 +120,11 @@ class TenantRegistrationController extends Controller
         $validated['timezone'] = $validated['timezone'] ?? 'Europe/Belgrade';
         $validated['currency'] = $validated['currency'] ?? 'RSD';
 
+        // Ensure Stripe returns the checkout session ID so we can confirm payment when the user lands back on the SaaS success page.
+        if (($validated['registration_type'] ?? '') === 'paid' && ($validated['payment_method'] ?? '') === 'stripe') {
+            $validated['success_url'] = route('tenant.register.success') . '?session_id={CHECKOUT_SESSION_ID}';
+        }
+
         try {
             // Call public API endpoint
             $baseUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
@@ -132,11 +139,19 @@ class TenantRegistrationController extends Controller
                 'hasApiToken' => !empty($apiToken)
             ]);
 
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
+            // Ensure tenant app knows this request originates from the SaaS app
+            $http = \Illuminate\Support\Facades\Http::withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
-                ])
-                ->post($apiUrl, $validated);
+                    'X-Saas-Registration' => '1',
+                ]);
+
+            // If an API token is configured, send it as a Bearer token
+            if (!empty($apiToken)) {
+                $http = $http->withToken($apiToken);
+            }
+
+            $response = $http->post($apiUrl, $validated);
 
             $statusCode = $response->status();
             $responseBody = $response->body();
@@ -157,14 +172,17 @@ class TenantRegistrationController extends Controller
             if ($response->successful() && ($data['success'] ?? false)) {
                 // 1. Create user in SASS database (for billing, profile, upgrades)
                 // This user is NOT a SuperAdmin, just a client.
-                \App\Models\User::updateOrCreate(
+                $user = \App\Models\User::updateOrCreate(
                     ['email' => $validated['email']],
                     [
                         'name' => $validated['name'],
-                        'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
+                        'password' => Hash::make($request->input('password')),
                         'role' => 'client',
                     ]
                 );
+
+                Auth::login($user);
+                $request->session()->regenerate();
 
                 if ($validated['registration_type'] === 'trial') {
                     return redirect()->route('tenant.register.success')
@@ -270,6 +288,43 @@ class TenantRegistrationController extends Controller
             return redirect()->route('tenant.register')
                 ->withErrors(['error' => 'Došlo je do greške prilikom verifikacije email-a.']);
         }
+    }
+
+    /**
+     * Show registration success page and confirm Stripe checkout if present.
+     */
+    public function success(Request $request)
+    {
+        $sessionId = $request->query('session_id');
+        $confirmationMessage = session('message');
+        $confirmationError = null;
+
+        if ($sessionId) {
+            try {
+                $result = $this->apiService->confirmStripeCheckoutSession($sessionId);
+
+                if ($result['success'] ?? false) {
+                    $confirmationMessage = $confirmationMessage ?: ($result['message'] ?? 'Plaćanje je potvrđeno i vaš paket je aktiviran.');
+                } else {
+                    $confirmationError = $result['error'] ?? 'Nije bilo moguće potvrditi plaćanje. Kontaktirajte podršku.';
+                }
+            } catch (\Exception $e) {
+                Log::error('TenantRegistrationController: Stripe confirmation failed', [
+                    'session_id' => $sessionId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $confirmationError = 'Nije bilo moguće potvrditi plaćanje. Molimo pokušajte ponovo ili kontaktirajte podršku.';
+            }
+        }
+
+        $tenantAppUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+
+        return Inertia::render('TenantRegistration/Success', [
+            'tenantAppUrl' => rtrim($tenantAppUrl, '/'),
+            'confirmation_message' => $confirmationMessage,
+            'confirmation_error' => $confirmationError,
+        ]);
     }
 
     /**

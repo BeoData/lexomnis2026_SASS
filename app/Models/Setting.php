@@ -64,8 +64,13 @@ class Setting extends Model
      */
     public static function getByKey(string $key, $default = null)
     {
-        $setting = self::where('key', $key)->first();
-        return $setting ? $setting->value : $default;
+        try {
+            $setting = self::where('key', $key)->first();
+            return $setting ? $setting->value : $default;
+        } catch (\Exception $e) {
+            // If table doesn't exist or other DB error, return default
+            return $default;
+        }
     }
 
     /**

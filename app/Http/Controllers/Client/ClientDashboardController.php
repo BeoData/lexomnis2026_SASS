@@ -57,16 +57,21 @@ class ClientDashboardController extends Controller
                     if ($tenant) {
                         Log::info('Client Dashboard: Found tenant', ['tenant_id' => $tenant['id'] ?? 'N/A']);
                         $subscription = $tenant['subscription'] ?? $tenant['active_subscription'] ?? null;
-                        
-                        // Fallback: If subscription not in tenant relation, try getting it by tenant_id
-                        if (!$subscription && isset($tenant['id'])) {
+
+                        // Fallback: Always try to enrich subscription details with the tenant admin API
+                        if (isset($tenant['id'])) {
                             $subRes = $this->apiService->getSubscriptions([
-                                'tenant_id' => $tenant['id'],
+                                'firm_id' => $tenant['id'],
                                 'per_page' => 1,
                             ]);
+
                             if ($subRes['success'] ?? false) {
                                 $subs = $subRes['data']['data'] ?? $subRes['data'] ?? [];
-                                $subscription = !empty($subs) ? (isset($subs[0]) ? $subs[0] : reset($subs)) : null;
+                                $tenantSubscription = !empty($subs) ? (isset($subs[0]) ? $subs[0] : reset($subs)) : null;
+                                if ($tenantSubscription) {
+                                    $subscription = $tenantSubscription;
+                                    $invoices = $tenantSubscription['payment_transactions'] ?? $tenantSubscription['paymentTransactions'] ?? [];
+                                }
                             }
                         }
                     }
@@ -144,14 +149,16 @@ class ClientDashboardController extends Controller
 
         $subscription = null;
         $plans = [];
+        $invoices = [];
+        $tenantId = null;
 
         try {
-            // 1. Fetch current subscription (reusing logic from dashboard)
+            // 1. Find the tenant record for this user by email
             $subRes = $this->apiService->getTenants([
-                'search' => $user->email,
-                'filter[email]' => $user->email,
-                'include' => 'subscription,plan',
-                'per_page' => 1,
+                'search'         => $user->email,
+                'filter[email]'  => $user->email,
+                'include'        => 'subscription,plan',
+                'per_page'       => 1,
             ]);
 
             if ($subRes['success'] ?? false) {
@@ -160,12 +167,52 @@ class ClientDashboardController extends Controller
                 if (!empty($tenants) && is_array($tenants)) {
                     $tenant = isset($tenants[0]) ? $tenants[0] : reset($tenants);
                     if ($tenant) {
+                        $tenantId = $tenant['id'] ?? null;
                         $subscription = $tenant['subscription'] ?? $tenant['active_subscription'] ?? null;
+
+                        // 2. Get the most recent subscription via the subscriptions API
+                        if ($tenantId) {
+                            $fallbackSubRes = $this->apiService->getSubscriptions([
+                                'tenant_id' => $tenantId,
+                                'per_page'  => 1,
+                                'include'   => 'plan,paymentTransactions',
+                            ]);
+
+                            if ($fallbackSubRes['success'] ?? false) {
+                                $fallbackSubs = $fallbackSubRes['data']['data'] ?? $fallbackSubRes['data'] ?? [];
+                                $tenantSubscription = !empty($fallbackSubs) ? (isset($fallbackSubs[0]) ? $fallbackSubs[0] : reset($fallbackSubs)) : null;
+
+                                if ($tenantSubscription) {
+                                    $subscription = $tenantSubscription;
+
+                                    // Try to pull invoices from nested relationship first
+                                    $invoices = $tenantSubscription['payment_transactions']
+                                        ?? $tenantSubscription['paymentTransactions']
+                                        ?? [];
+
+                                    // 3a. If still empty, query payments by subscription ID
+                                    if (empty($invoices) && isset($tenantSubscription['id'])) {
+                                        $payRes = $this->apiService->getPaymentsBySubscription((int) $tenantSubscription['id']);
+                                        if ($payRes['success'] ?? false) {
+                                            $invoices = $payRes['data']['data'] ?? $payRes['data'] ?? [];
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 3b. Fallback: query transactions directly by tenant ID
+                            if (empty($invoices)) {
+                                $payRes = $this->apiService->getPaymentTransactionsByTenant((int) $tenantId);
+                                if ($payRes['success'] ?? false) {
+                                    $invoices = $payRes['data']['data'] ?? $payRes['data'] ?? [];
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            // 2. Get plans for upgrade options
+            // 4. Get plans for upgrade options
             $plansResponse = $this->apiService->getPlans(['is_active' => true]);
             if ($plansResponse['success'] ?? false) {
                 $plansData = $plansResponse['data'] ?? [];
@@ -181,9 +228,10 @@ class ClientDashboardController extends Controller
         }
 
         return view('client.subscription', [
-            'user' => $user,
+            'user'         => $user,
             'subscription' => $subscription,
-            'plans' => $plans,
+            'plans'        => $plans,
+            'invoices'     => $invoices,
             'tenantAppUrl' => rtrim($tenantAppUrl, '/'),
         ]);
     }

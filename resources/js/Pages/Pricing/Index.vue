@@ -137,18 +137,14 @@
 
                     <!-- CTA Button -->
                     <Link
-                        :href="isPlanAvailableForPeriod(planGroup) 
-                            ? ($page.props.auth?.user 
-                                ? `/checkout/${currentPlan(planGroup).id}?period=${billingPeriod}` 
-                                : `/register?registration_type=${planGroup.name.toLowerCase().includes('trial') ? 'trial' : 'paid'}&plan_id=${currentPlan(planGroup).id}&billing_period=${billingPeriod}`) 
-                            : '#'"
+                        :href="isPlanAvailableForPeriod(planGroup) ? getPlanActionUrl(planGroup) : '#'"
                         :class="[
                             planGroup.metadata?.popular ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-900 hover:bg-gray-800 text-white',
                             !isPlanAvailableForPeriod(planGroup) ? 'opacity-50 cursor-not-allowed pointer-events-none bg-gray-400 hover:bg-gray-400' : ''
                         ]"
                         class="block w-full text-center px-6 py-3 rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg"
                     >
-                        {{ planGroup.name.toLowerCase().includes('trial') ? 'Try for Free' : 'Izaberi' }}
+                        {{ isTrialPlanGroup(planGroup) ? 'Try for Free' : 'Izaberi' }}
                     </Link>
 
                     <!-- Add-ons Available -->
@@ -193,8 +189,11 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { useRoute } from '@/composables/useRoute';
 import PublicLayout from '@/Pages/Layouts/PublicLayout.vue';
+
+const page = usePage();
 
 const props = defineProps({
     groupedPlans: {
@@ -268,4 +267,43 @@ const currencyCode = computed(() => {
     }
     return 'USD';
 });
+
+const { route } = useRoute();
+
+const isTrialPlanGroup = (planGroup) => {
+    const name = String(planGroup?.name ?? '');
+    return /trial|free|besplatno/i.test(name)
+        || planGroup?.metadata?.trial === true
+        || planGroup?.metadata?.is_trial === true;
+};
+
+const getRegisterUrl = (planGroup) => {
+    const plan = currentPlan(planGroup);
+    if (!plan) {
+        return '#';
+    }
+
+    const registrationType = isTrialPlanGroup(planGroup) ? 'trial' : 'paid';
+    const params = new URLSearchParams({
+        registration_type: registrationType,
+        plan_id: plan.id,
+        billing_period: billingPeriod.value,
+    });
+
+    return `${route('tenant.register')}?${params.toString()}`;
+};
+
+const getPlanActionUrl = (planGroup) => {
+    const plan = currentPlan(planGroup);
+    if (!plan) {
+        return '#';
+    }
+
+    if (page.props.auth?.user) {
+        // Authenticated user, redirect to checkout
+        return `/checkout/${plan.id}?period=${billingPeriod.value}`;
+    }
+
+    return getRegisterUrl(planGroup);
+};
 </script>

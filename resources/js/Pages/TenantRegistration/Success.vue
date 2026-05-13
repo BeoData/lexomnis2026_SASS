@@ -10,8 +10,11 @@
                 
                 <h1 class="text-3xl font-bold text-gray-900 mb-4">Uspešno!</h1>
                 
-                <div v-if="$page.props.flash?.message" class="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-                    <p class="text-green-800">{{ $page.props.flash.message }}</p>
+                <div v-if="confirmationError" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+                    <p class="text-red-800">{{ confirmationError }}</p>
+                </div>
+                <div v-else-if="confirmationMessage || $page.props.flash?.message" class="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+                    <p class="text-green-800">{{ confirmationMessage || $page.props.flash.message }}</p>
                 </div>
                 
                 <p class="text-lg text-gray-600 mb-8">
@@ -59,7 +62,18 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    confirmation_message: {
+        type: String,
+        default: '',
+    },
+    confirmation_error: {
+        type: String,
+        default: '',
+    },
 });
+
+const confirmationMessage = computed(() => props.confirmation_message);
+const confirmationError = computed(() => props.confirmation_error);
 
 // Build tenant login URL dynamically from backend-provided tenantAppUrl
 const tenantLoginUrl = computed(() => {
