@@ -15,6 +15,10 @@ class LoginController extends Controller
     public function show()
     {
         if (Auth::check()) {
+            $default = Auth::user()->isSuperAdmin() ? route('dashboard') : route('client.dashboard');
+            if (request()->header('X-Inertia')) {
+                return Inertia::location($default);
+            }
             return $this->redirectByRole(Auth::user());
         }
 

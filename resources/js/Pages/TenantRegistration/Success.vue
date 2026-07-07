@@ -37,12 +37,12 @@
                     </div>
 
                     <!-- Sekundarna akcija: Upravljanje profilom na SASS portalu -->
-                    <Link
+                    <a
                         :href="route('login')"
-                        class="inline-block bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg transition-colors border border-gray-300"
+                        class="inline-block bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg transition-colors border border-gray-300 text-center"
                     >
                         Upravljaj Profilom i Računima
-                    </Link>
+                    </a>
                 </div>
             </div>
         </div>
