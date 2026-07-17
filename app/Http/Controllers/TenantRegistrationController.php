@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
+use App\Models\User;
 use App\Services\TenantAppApiService;
+use App\Support\TenantAppUrl;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
@@ -39,9 +44,10 @@ class TenantRegistrationController extends Controller
 
         // Group plans by plan_key manually
         $groupedPlans = [];
-        if (is_array($plans) && !empty($plans)) {
+        if (is_array($plans) && ! empty($plans)) {
             $grouped = collect($plans)->groupBy('plan_key')->map(function ($group, $planKey) {
                 $first = $group->first();
+
                 return [
                     'plan_key' => $planKey,
                     'name' => $first['name'] ?? '',
@@ -63,14 +69,14 @@ class TenantRegistrationController extends Controller
             : 'monthly';
 
         $initialPlanId = $request->query('plan_id');
-        $initialPlanId = is_numeric($initialPlanId) ? (int)$initialPlanId : null;
+        $initialPlanId = is_numeric($initialPlanId) ? (int) $initialPlanId : null;
 
         return Inertia::render('TenantRegistration/Register', [
             'groupedPlans' => $groupedPlans,
             'initial_registration_type' => $initialRegistrationType,
             'initial_billing_period' => $initialBillingPeriod,
             'initial_plan_id' => $initialPlanId,
-            'paypal_enabled' => !empty(config('services.paypal.client_id')) && !empty(config('services.paypal.client_secret')),
+            'paypal_enabled' => ! empty(config('services.paypal.client_id')) && ! empty(config('services.paypal.client_secret')),
         ]);
     }
 
@@ -82,7 +88,7 @@ class TenantRegistrationController extends Controller
         Log::debug('TenantRegistrationController: store() entry', [
             'has_name' => $request->has('name'),
             'has_first_name' => $request->has('first_name'),
-            'registration_type' => $request->input('registration_type')
+            'registration_type' => $request->input('registration_type'),
         ]);
 
         $validated = $request->validate([
@@ -107,12 +113,12 @@ class TenantRegistrationController extends Controller
 
         Log::debug('TenantRegistrationController: Validation passed', [
             'email' => $validated['email'] ?? null,
-            'registration_type' => $validated['registration_type'] ?? null
+            'registration_type' => $validated['registration_type'] ?? null,
         ]);
 
         // Combine first_name and last_name into name if not provided directly
-        if (empty($validated['name']) && !empty($validated['first_name']) && !empty($validated['last_name'])) {
-            $validated['name'] = trim($validated['first_name'] . ' ' . $validated['last_name']);
+        if (empty($validated['name']) && ! empty($validated['first_name']) && ! empty($validated['last_name'])) {
+            $validated['name'] = trim($validated['first_name'].' '.$validated['last_name']);
         }
 
         // Set defaults
@@ -122,32 +128,32 @@ class TenantRegistrationController extends Controller
 
         // Ensure Stripe returns the checkout session ID so we can confirm payment when the user lands back on the SaaS success page.
         if (($validated['registration_type'] ?? '') === 'paid' && ($validated['payment_method'] ?? '') === 'stripe') {
-            $validated['success_url'] = route('tenant.register.success') . '?session_id={CHECKOUT_SESSION_ID}';
+            $validated['success_url'] = route('tenant.register.success').'?session_id={CHECKOUT_SESSION_ID}';
         }
 
         try {
             // Call public API endpoint
-            $baseUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
-            $apiToken = \App\Models\Setting::getByKey('tenant_app_api_token') ?: config('services.tenant_app.api_token');
+            $baseUrl = Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+            $apiToken = Setting::getByKey('tenant_app_api_token') ?: config('services.tenant_app.api_token');
 
-            $baseUrl = rtrim($baseUrl, '/');
+            $baseUrl = TenantAppUrl::normalize($baseUrl);
             $apiUrl = "{$baseUrl}/api/public/tenants/register";
 
             Log::debug('TenantRegistrationController: Before API call', [
                 'baseUrl' => $baseUrl,
                 'apiUrl' => $apiUrl,
-                'hasApiToken' => !empty($apiToken)
+                'hasApiToken' => ! empty($apiToken),
             ]);
 
             // Ensure tenant app knows this request originates from the SaaS app
-            $http = \Illuminate\Support\Facades\Http::withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'X-Saas-Registration' => '1',
-                ]);
+            $http = Http::withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'X-Saas-Registration' => '1',
+            ]);
 
             // If an API token is configured, send it as a Bearer token
-            if (!empty($apiToken)) {
+            if (! empty($apiToken)) {
                 $http = $http->withToken($apiToken);
             }
 
@@ -155,10 +161,10 @@ class TenantRegistrationController extends Controller
 
             $statusCode = $response->status();
             $responseBody = $response->body();
-             
+
             Log::debug('TenantRegistrationController: API response received', [
                 'statusCode' => $statusCode,
-                'responseBody' => $responseBody
+                'responseBody' => $responseBody,
             ]);
 
             $data = $response->json();
@@ -166,13 +172,13 @@ class TenantRegistrationController extends Controller
             Log::debug('TenantRegistrationController: Response parsed', [
                 'success' => $data['success'] ?? false,
                 'hasError' => isset($data['error']),
-                'error' => $data['error'] ?? null
+                'error' => $data['error'] ?? null,
             ]);
 
             if ($response->successful() && ($data['success'] ?? false)) {
                 // 1. Create user in SASS database (for billing, profile, upgrades)
                 // This user is NOT a SuperAdmin, just a client.
-                $user = \App\Models\User::updateOrCreate(
+                $user = User::updateOrCreate(
                     ['email' => $validated['email']],
                     [
                         'name' => $validated['name'],
@@ -192,7 +198,7 @@ class TenantRegistrationController extends Controller
 
                     if ($paymentUrl) {
                         // For external URLs like Stripe checkout, use Inertia::location() to avoid CORS issues
-                        return \Inertia\Inertia::location($paymentUrl);
+                        return Inertia::location($paymentUrl);
                     }
 
                     return back()->withErrors([
@@ -203,6 +209,7 @@ class TenantRegistrationController extends Controller
                 // Handle validation errors from Core App (422)
                 if ($response->status() === 422) {
                     $errors = $data['errors'] ?? [];
+
                     return back()->withErrors($errors)->withInput();
                 }
 
@@ -210,13 +217,13 @@ class TenantRegistrationController extends Controller
                     'error' => $data['error'] ?? $data['message'] ?? 'Došlo je do greške prilikom registracije.',
                 ])->withInput();
             }
-        } catch (\Illuminate\Http\Client\RequestException $e) {
+        } catch (RequestException $e) {
             $response = $e->response;
             $errorData = $response?->json() ?? ['message' => $e->getMessage()];
 
             Log::debug('TenantRegistrationController: RequestException caught', [
                 'statusCode' => $response?->status(),
-                'errorData' => $errorData
+                'errorData' => $errorData,
             ]);
 
             Log::error('Tenant registration failed', [
@@ -230,7 +237,7 @@ class TenantRegistrationController extends Controller
         } catch (\Exception $e) {
             Log::debug('TenantRegistrationController: General Exception caught', [
                 'message' => $e->getMessage(),
-                'class' => get_class($e)
+                'class' => get_class($e),
             ]);
 
             Log::error('Tenant registration exception', [
@@ -250,14 +257,14 @@ class TenantRegistrationController extends Controller
     public function verifyEmail(string $token)
     {
         try {
-            $baseUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
-            $baseUrl = rtrim($baseUrl, '/');
+            $baseUrl = Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+            $baseUrl = TenantAppUrl::normalize($baseUrl);
             $apiUrl = "{$baseUrl}/api/public/tenants/verify-email";
 
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                ])
+            $response = Http::withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])
                 ->post($apiUrl, ['token' => $token]);
 
             $data = $response->json();
@@ -269,7 +276,7 @@ class TenantRegistrationController extends Controller
                 return redirect()->route('tenant.register')
                     ->withErrors(['error' => $data['error'] ?? 'Nevažeći ili istekao verification token.']);
             }
-        } catch (\Illuminate\Http\Client\RequestException $e) {
+        } catch (RequestException $e) {
             $response = $e->response;
             $errorData = $response?->json() ?? ['message' => $e->getMessage()];
 
@@ -318,10 +325,10 @@ class TenantRegistrationController extends Controller
             }
         }
 
-        $tenantAppUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+        $tenantAppUrl = Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
 
         return Inertia::render('TenantRegistration/Success', [
-            'tenantAppUrl' => rtrim($tenantAppUrl, '/'),
+            'tenantAppUrl' => TenantAppUrl::normalize($tenantAppUrl),
             'confirmation_message' => $confirmationMessage,
             'confirmation_error' => $confirmationError,
         ]);
@@ -337,14 +344,14 @@ class TenantRegistrationController extends Controller
         ]);
 
         try {
-            $baseUrl = \App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
-            $baseUrl = rtrim($baseUrl, '/');
+            $baseUrl = Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+            $baseUrl = TenantAppUrl::normalize($baseUrl);
             $apiUrl = "{$baseUrl}/api/public/tenants/resend-verification";
 
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                ])
+            $response = Http::withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])
                 ->post($apiUrl, $validated);
 
             $data = $response->json();

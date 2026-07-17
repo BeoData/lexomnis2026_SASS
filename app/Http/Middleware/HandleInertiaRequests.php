@@ -2,7 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Setting;
+use App\Support\TenantAppUrl;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -38,7 +41,7 @@ class HandleInertiaRequests extends Middleware
         // Get the authenticated user directly from the guard
         // This ensures we always get the current user, not a cached one
         $user = auth()->user();
-        
+
         $shared = [
             ...parent::share($request),
             'auth' => [
@@ -50,19 +53,21 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'stripePublicKey' => config('services.stripe.key'),
-            'tenantAppUrl' => rtrim(\App\Models\Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url'), '/'),
+            'tenantAppUrl' => TenantAppUrl::normalize(
+                Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url')
+            ),
             'flash' => [
                 'message' => $request->session()->get('message'),
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
             ],
         ];
-        
+
         // Ensure auth is always set, even if null
-        if (!isset($shared['auth'])) {
+        if (! isset($shared['auth'])) {
             $shared['auth'] = ['user' => null];
         }
-        
+
         return $shared;
     }
 
@@ -79,19 +84,17 @@ class HandleInertiaRequests extends Middleware
     /**
      * Handle Inertia requests.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function handle(Request $request, \Closure $next)
     {
         $response = parent::handle($request, $next);
-        
+
         // Add CSRF token to response headers for auto-refresh
         if ($request->hasSession()) {
             $response->headers->set('X-CSRF-TOKEN', $request->session()->token());
         }
-        
+
         return $response;
     }
 }

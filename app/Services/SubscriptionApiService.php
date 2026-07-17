@@ -2,18 +2,23 @@
 
 namespace App\Services;
 
+use App\Support\TenantAppUrl;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class SubscriptionApiService
 {
     protected string $baseUrl;
+
     protected int $timeout;
+
     protected int $connectTimeout;
 
     public function __construct()
     {
-        $this->baseUrl = config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'));
+        $this->baseUrl = TenantAppUrl::normalize(
+            config('services.tenant_app.url', env('TENANT_APP_URL', 'http://localhost:8000'))
+        );
         $this->timeout = (int) config('services.tenant_app.timeout', 30);
         $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 2);
     }
@@ -23,8 +28,8 @@ class SubscriptionApiService
      */
     protected function request(string $method, string $endpoint, array $data = [], array $headers = []): array
     {
-        $url = rtrim($this->baseUrl, '/') . '/api/subscriptions/' . ltrim($endpoint, '/');
-        
+        $url = rtrim($this->baseUrl, '/').'/api/subscriptions/'.ltrim($endpoint, '/');
+
         $defaultHeaders = [
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',

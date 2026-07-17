@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\TenantAppApiService;
+use App\Support\TenantAppUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -43,17 +44,17 @@ class ClientDashboardController extends Controller
 
             Log::debug('Client Dashboard: Subscription API response', [
                 'success' => $response['success'] ?? false,
-                'user_email' => $user->email
+                'user_email' => $user->email,
             ]);
 
             if ($response['success'] ?? false) {
                 $payload = $response['data'] ?? [];
                 // Handle different paginated formats
                 $tenants = $payload['data'] ?? $payload ?? [];
-                
-                if (!empty($tenants) && is_array($tenants)) {
+
+                if (! empty($tenants) && is_array($tenants)) {
                     $tenant = isset($tenants[0]) ? $tenants[0] : reset($tenants);
-                    
+
                     if ($tenant) {
                         Log::info('Client Dashboard: Found tenant', ['tenant_id' => $tenant['id'] ?? 'N/A']);
                         $subscription = $tenant['subscription'] ?? $tenant['active_subscription'] ?? null;
@@ -67,7 +68,7 @@ class ClientDashboardController extends Controller
 
                             if ($subRes['success'] ?? false) {
                                 $subs = $subRes['data']['data'] ?? $subRes['data'] ?? [];
-                                $tenantSubscription = !empty($subs) ? (isset($subs[0]) ? $subs[0] : reset($subs)) : null;
+                                $tenantSubscription = ! empty($subs) ? (isset($subs[0]) ? $subs[0] : reset($subs)) : null;
                                 if ($tenantSubscription) {
                                     $subscription = $tenantSubscription;
                                     $invoices = $tenantSubscription['payment_transactions'] ?? $tenantSubscription['paymentTransactions'] ?? [];
@@ -78,13 +79,13 @@ class ClientDashboardController extends Controller
                 }
             } else {
                 Log::warning('Client Dashboard: API call for tenants failed', [
-                    'error' => $response['error'] ?? 'Unknown error'
+                    'error' => $response['error'] ?? 'Unknown error',
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('Client dashboard: Critical failure fetching subscription info', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
         }
 
@@ -92,7 +93,7 @@ class ClientDashboardController extends Controller
             'user' => $user,
             'subscription' => $subscription,
             'invoices' => $invoices,
-            'tenantAppUrl' => rtrim($tenantAppUrl, '/'),
+            'tenantAppUrl' => TenantAppUrl::normalize($tenantAppUrl),
         ]);
     }
 
@@ -117,7 +118,7 @@ class ClientDashboardController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'phone' => ['nullable', 'string', 'max:255'],
             'current_password' => ['nullable', 'string'],
             'new_password' => ['nullable', 'string', 'min:8', 'confirmed'],
@@ -127,8 +128,8 @@ class ClientDashboardController extends Controller
         $user->email = $validated['email'];
 
         // Update password if provided
-        if (!empty($validated['new_password'])) {
-            if (empty($validated['current_password']) || !Hash::check($validated['current_password'], $user->password)) {
+        if (! empty($validated['new_password'])) {
+            if (empty($validated['current_password']) || ! Hash::check($validated['current_password'], $user->password)) {
                 return back()->withErrors(['current_password' => 'Trenutna lozinka nije ispravna.']);
             }
             $user->password = $validated['new_password'];
@@ -155,16 +156,16 @@ class ClientDashboardController extends Controller
         try {
             // 1. Find the tenant record for this user by email
             $subRes = $this->apiService->getTenants([
-                'search'         => $user->email,
-                'filter[email]'  => $user->email,
-                'include'        => 'subscription,plan',
-                'per_page'       => 1,
+                'search' => $user->email,
+                'filter[email]' => $user->email,
+                'include' => 'subscription,plan',
+                'per_page' => 1,
             ]);
 
             if ($subRes['success'] ?? false) {
                 $payload = $subRes['data'] ?? [];
                 $tenants = $payload['data'] ?? $payload ?? [];
-                if (!empty($tenants) && is_array($tenants)) {
+                if (! empty($tenants) && is_array($tenants)) {
                     $tenant = isset($tenants[0]) ? $tenants[0] : reset($tenants);
                     if ($tenant) {
                         $tenantId = $tenant['id'] ?? null;
@@ -174,13 +175,13 @@ class ClientDashboardController extends Controller
                         if ($tenantId) {
                             $fallbackSubRes = $this->apiService->getSubscriptions([
                                 'tenant_id' => $tenantId,
-                                'per_page'  => 1,
-                                'include'   => 'plan,paymentTransactions',
+                                'per_page' => 1,
+                                'include' => 'plan,paymentTransactions',
                             ]);
 
                             if ($fallbackSubRes['success'] ?? false) {
                                 $fallbackSubs = $fallbackSubRes['data']['data'] ?? $fallbackSubRes['data'] ?? [];
-                                $tenantSubscription = !empty($fallbackSubs) ? (isset($fallbackSubs[0]) ? $fallbackSubs[0] : reset($fallbackSubs)) : null;
+                                $tenantSubscription = ! empty($fallbackSubs) ? (isset($fallbackSubs[0]) ? $fallbackSubs[0] : reset($fallbackSubs)) : null;
 
                                 if ($tenantSubscription) {
                                     $subscription = $tenantSubscription;
@@ -228,11 +229,11 @@ class ClientDashboardController extends Controller
         }
 
         return view('client.subscription', [
-            'user'         => $user,
+            'user' => $user,
             'subscription' => $subscription,
-            'plans'        => $plans,
-            'invoices'     => $invoices,
-            'tenantAppUrl' => rtrim($tenantAppUrl, '/'),
+            'plans' => $plans,
+            'invoices' => $invoices,
+            'tenantAppUrl' => TenantAppUrl::normalize($tenantAppUrl),
         ]);
     }
 }

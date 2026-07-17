@@ -2,56 +2,68 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
+use App\Support\TenantAppUrl;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class TenantAppApiService
 {
     protected string $baseUrl;
+
     protected ?string $apiToken;
+
     protected int $timeout;
+
     protected int $connectTimeout;
+
     protected int $retryAttempts;
+
     protected int $retryDelayMs;
+
     protected int $downTtlSeconds;
+
     protected int $dashboardTimeout;
 
     public function __construct()
     {
         // Try to get from settings first, then fallback to config/env
         try {
-            $this->baseUrl = \App\Models\Setting::getByKey('tenant_app_url') 
-                ?: config('services.tenant_app.url');
-            
-            $this->apiToken = \App\Models\Setting::getByKey('tenant_app_api_token') 
+            $this->baseUrl = TenantAppUrl::normalize(
+                Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url')
+            );
+
+            $this->apiToken = Setting::getByKey('tenant_app_api_token')
                 ?: config('services.tenant_app.api_token') ?: null;
-            
-            $timeoutRaw = (int) (\App\Models\Setting::getByKey('tenant_app_timeout') 
+
+            $timeoutRaw = (int) (Setting::getByKey('tenant_app_timeout')
                 ?: config('services.tenant_app.timeout', 30));
             $this->timeout = min((int) config('services.tenant_app.timeout_max_cap', 15), $timeoutRaw);
 
             $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 5);
-            
-            $this->retryAttempts = (int) (\App\Models\Setting::getByKey('tenant_app_retry_attempts') 
+
+            $this->retryAttempts = (int) (Setting::getByKey('tenant_app_retry_attempts')
                 ?: config('services.tenant_app.retry_attempts', 2));
 
             $this->retryDelayMs = (int) config('services.tenant_app.retry_delay_ms', 250);
             $this->downTtlSeconds = (int) config('services.tenant_app.down_ttl_seconds', 60);
-            
+
             $this->dashboardTimeout = min(
                 (int) config('services.tenant_app.dashboard_timeout', 8),
                 $this->timeout
             );
         } catch (\Exception $e) {
             // Fallback to config/env if settings table doesn't exist
-            $this->baseUrl = config('services.tenant_app.url');
+            $this->baseUrl = TenantAppUrl::normalize(config('services.tenant_app.url'));
             $this->apiToken = config('services.tenant_app.api_token') ?: null;
-            
+
             $timeoutRaw = (int) config('services.tenant_app.timeout', 30);
             $this->timeout = min((int) config('services.tenant_app.timeout_max_cap', 15), $timeoutRaw);
-            
+
             $this->connectTimeout = (int) config('services.tenant_app.connect_timeout', 5);
             $this->retryAttempts = (int) config('services.tenant_app.retry_attempts', 2);
             $this->retryDelayMs = (int) config('services.tenant_app.retry_delay_ms', 250);
@@ -65,7 +77,7 @@ class TenantAppApiService
 
     protected function downCacheKey(): string
     {
-        return 'tenant_app:down:' . md5((string) $this->baseUrl);
+        return 'tenant_app:down:'.md5((string) $this->baseUrl);
     }
 
     protected function markTenantAppDown(): void
@@ -75,9 +87,11 @@ class TenantAppApiService
             Cache::put($this->downCacheKey(), true, now()->addSeconds($this->downTtlSeconds));
         }
     }
+
     protected function isTimeoutException(\Throwable $e): bool
     {
         $msg = $e->getMessage();
+
         return str_contains($msg, 'cURL error 28')
             || str_contains($msg, 'Operation timed out')
             || str_contains($msg, 'timed out');
@@ -96,7 +110,7 @@ class TenantAppApiService
             ];
         }
 
-        if (!$this->apiToken) {
+        if (! $this->apiToken) {
             return [
                 'success' => false,
                 'error' => 'API token is not configured. Set it in Admin → Settings.',
@@ -105,10 +119,10 @@ class TenantAppApiService
         }
 
         $pathPrefix = rtrim(config('services.tenant_app.api_path_prefix', 'api/admin'), '/');
-        $url = rtrim($this->baseUrl, '/') . '/' . $pathPrefix . '/' . ltrim($endpoint, '/');
+        $url = rtrim($this->baseUrl, '/').'/'.$pathPrefix.'/'.ltrim($endpoint, '/');
 
         $defaultHeaders = [
-            'Authorization' => 'Bearer ' . $this->apiToken,
+            'Authorization' => 'Bearer '.$this->apiToken,
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
         ];
@@ -159,6 +173,7 @@ class TenantAppApiService
                 if ($response->serverError() && $attempt < $this->retryAttempts - 1) {
                     $attempt++;
                     usleep((int) ($this->retryDelayMs * 1000));
+
                     continue;
                 }
 
@@ -248,6 +263,7 @@ class TenantAppApiService
         if ($billingPeriod) {
             $data['billing_period'] = $billingPeriod;
         }
+
         return $this->request('POST', "tenants/{$id}/assign-plan", $data);
     }
 
@@ -258,7 +274,7 @@ class TenantAppApiService
 
     public function confirmStripeCheckoutSession(string $sessionId): array
     {
-        return $this->request('GET', "stripe/checkout/confirm", ['session_id' => $sessionId]);
+        return $this->request('GET', 'stripe/checkout/confirm', ['session_id' => $sessionId]);
     }
 
     // User Management
@@ -270,6 +286,7 @@ class TenantAppApiService
     public function getUser(int $id, ?int $tenantId = null): array
     {
         $payload = $tenantId ? ['tenant_id' => $tenantId] : [];
+
         return $this->request('GET', "users/{$id}", $payload);
     }
 
@@ -278,24 +295,28 @@ class TenantAppApiService
         if ($tenantId) {
             $data['tenant_id'] = $tenantId;
         }
+
         return $this->request('PUT', "users/{$id}", $data);
     }
 
     public function suspendUser(int $id, ?int $tenantId = null): array
     {
         $payload = $tenantId ? ['tenant_id' => $tenantId] : [];
+
         return $this->request('POST', "users/{$id}/suspend", $payload);
     }
 
     public function forceLogoutUser(int $id, ?int $tenantId = null): array
     {
         $payload = $tenantId ? ['tenant_id' => $tenantId] : [];
+
         return $this->request('POST', "users/{$id}/force-logout", $payload);
     }
 
     public function resetUserPassword(int $id, ?int $tenantId = null): array
     {
         $payload = $tenantId ? ['tenant_id' => $tenantId] : [];
+
         return $this->request('POST', "users/{$id}/reset-password", $payload);
     }
 
@@ -306,12 +327,14 @@ class TenantAppApiService
         if ($tenantId) {
             $payload['tenant_id'] = $tenantId;
         }
+
         return $this->request('POST', "users/{$userId}/impersonate", $payload);
     }
 
     public function generateTenantImpersonationToken(int $tenantId, bool $readOnly = false): array
     {
         $payload = ['read_only' => $readOnly];
+
         return $this->request('POST', "tenants/{$tenantId}/impersonate", $payload);
     }
 
@@ -472,36 +495,36 @@ class TenantAppApiService
      */
     public function getDashboardData(): array
     {
-        if (!$this->apiToken) {
+        if (! $this->apiToken) {
             return $this->emptyDashboardData();
         }
 
-        $base = rtrim($this->baseUrl, '/') . '/' . ltrim(config('services.tenant_app.api_path_prefix', 'api/admin'), '/') . '/';
+        $base = rtrim($this->baseUrl, '/').'/'.ltrim(config('services.tenant_app.api_path_prefix', 'api/admin'), '/').'/';
         $headers = [
-            'Authorization' => 'Bearer ' . $this->apiToken,
+            'Authorization' => 'Bearer '.$this->apiToken,
             'Accept' => 'application/json',
         ];
 
         try {
             $responses = Http::connectTimeout($this->connectTimeout)
                 ->timeout($this->dashboardTimeout)
-                ->pool(fn(\Illuminate\Http\Client\Pool $pool) => [
-                    $pool->as('tenants')->withHeaders($headers)->get($base . 'tenants', ['per_page' => 1]),
-                    $pool->as('tenants_active')->withHeaders($headers)->get($base . 'tenants', ['status' => 'active', 'per_page' => 1]),
-                    $pool->as('tenants_suspended')->withHeaders($headers)->get($base . 'tenants', ['status' => 'suspended', 'per_page' => 1]),
-                    $pool->as('tenants_trial')->withHeaders($headers)->get($base . 'tenants', ['status' => 'trial', 'per_page' => 1]),
-                    $pool->as('users')->withHeaders($headers)->get($base . 'users', ['per_page' => 1]),
-                    $pool->as('subscriptions')->withHeaders($headers)->get($base . 'subscriptions', ['per_page' => 1]),
-                    $pool->as('subscriptions_active')->withHeaders($headers)->get($base . 'subscriptions', ['status' => 'active', 'per_page' => 1]),
-                    $pool->as('plans')->withHeaders($headers)->get($base . 'plans', ['per_page' => 1]),
-                    $pool->as('health')->withHeaders($headers)->get($base . 'system/health'),
-                    $pool->as('audit_logs')->withHeaders($headers)->get($base . 'audit-logs', ['per_page' => 10]),
+                ->pool(fn (Pool $pool) => [
+                    $pool->as('tenants')->withHeaders($headers)->get($base.'tenants', ['per_page' => 1]),
+                    $pool->as('tenants_active')->withHeaders($headers)->get($base.'tenants', ['status' => 'active', 'per_page' => 1]),
+                    $pool->as('tenants_suspended')->withHeaders($headers)->get($base.'tenants', ['status' => 'suspended', 'per_page' => 1]),
+                    $pool->as('tenants_trial')->withHeaders($headers)->get($base.'tenants', ['status' => 'trial', 'per_page' => 1]),
+                    $pool->as('users')->withHeaders($headers)->get($base.'users', ['per_page' => 1]),
+                    $pool->as('subscriptions')->withHeaders($headers)->get($base.'subscriptions', ['per_page' => 1]),
+                    $pool->as('subscriptions_active')->withHeaders($headers)->get($base.'subscriptions', ['status' => 'active', 'per_page' => 1]),
+                    $pool->as('plans')->withHeaders($headers)->get($base.'plans', ['per_page' => 1]),
+                    $pool->as('health')->withHeaders($headers)->get($base.'system/health'),
+                    $pool->as('audit_logs')->withHeaders($headers)->get($base.'audit-logs', ['per_page' => 10]),
                 ]);
 
-            $r = fn(string $key) => $responses[$key] ?? null;
-            $isResponse = fn($v) => $v instanceof \Illuminate\Http\Client\Response;
-            $json = fn($res) => $isResponse($res) && $res->successful() ? $res->json() : null;
-            $ok = fn($res) => $isResponse($res) && $res->successful();
+            $r = fn (string $key) => $responses[$key] ?? null;
+            $isResponse = fn ($v) => $v instanceof Response;
+            $json = fn ($res) => $isResponse($res) && $res->successful() ? $res->json() : null;
+            $ok = fn ($res) => $isResponse($res) && $res->successful();
 
             $tenantsData = $json($r('tenants'));
             $total = $tenantsData['total'] ?? 0;
@@ -535,6 +558,7 @@ class TenantAppApiService
             ];
         } catch (\Throwable $e) {
             Log::warning('TenantAppApiService getDashboardData failed', ['message' => $e->getMessage()]);
+
             return $this->emptyDashboardData();
         }
     }
@@ -554,4 +578,3 @@ class TenantAppApiService
         ];
     }
 }
-
