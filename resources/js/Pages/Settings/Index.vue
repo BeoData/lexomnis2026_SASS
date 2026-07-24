@@ -51,7 +51,7 @@
                                     type="url"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     :class="{ 'border-red-300': urlError }"
-                                    placeholder="http://localhost:8000"
+                                    :placeholder="sharedTenantAppUrl"
                                 />
                                 <p v-if="urlError" class="mt-1 text-xs text-red-600">{{ urlError }}</p>
                                 <p v-else class="mt-1 text-xs text-gray-500">
@@ -122,7 +122,7 @@
                                         <div>
                                             <p class="font-medium mb-1">Option 1: Through UI (Recommended)</p>
                                             <ol class="list-decimal list-inside space-y-1 ml-2">
-                                                <li>Go to Tenant App: <a href="http://127.0.0.1:8000/settings/personal/api-token" target="_blank" class="text-blue-600 underline">http://127.0.0.1:8000/settings/personal/api-token</a></li>
+                                                <li>Go to Tenant App: <a :href="`${sharedTenantAppUrl}/settings/personal/api-token`" target="_blank" class="text-blue-600 underline">{{ sharedTenantAppUrl }}/settings/personal/api-token</a></li>
                                                 <li>Click "Generate New API Token"</li>
                                                 <li>Enter a name (e.g., "Super Admin Token")</li>
                                                 <li>Click "Generate Token"</li>
@@ -238,11 +238,12 @@
 
 <script setup>
 import AuthenticatedLayout from '@/Pages/Layouts/AuthenticatedLayout.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 import { useRoute } from '@/composables/useRoute';
 
 const { route } = useRoute();
+const sharedTenantAppUrl = computed(() => usePage().props.tenantAppUrl);
 
 const props = defineProps({
     groups: {
