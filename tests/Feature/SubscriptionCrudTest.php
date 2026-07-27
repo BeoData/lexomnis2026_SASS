@@ -17,9 +17,9 @@ class SubscriptionCrudTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create super admin user for testing
-        $this->user = User::factory()->create([
+        $this->user = User::factory()->superAdmin()->create([
             'email' => 'superadmin@lexomnis.com',
             'password' => bcrypt('password'),
         ]);
@@ -54,7 +54,7 @@ class SubscriptionCrudTest extends TestCase
     public function test_it_can_display_subscription_details()
     {
         $subscriptionId = 1;
-        
+
         // Mock API response
         Http::fake([
             "*/api/admin/subscriptions/{$subscriptionId}" => Http::response([
@@ -99,4 +99,3 @@ class SubscriptionCrudTest extends TestCase
         $response->assertRedirect('/login');
     }
 }
-

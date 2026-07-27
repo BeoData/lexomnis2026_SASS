@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class SettingsCrudTest extends TestCase
@@ -17,7 +18,7 @@ class SettingsCrudTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->superAdmin()->create();
 
         // Seed some basic settings
         Setting::set('app_name', 'Original Name', 'string', 'general');
@@ -31,7 +32,7 @@ class SettingsCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Settings/Index')
                 ->has('groups')
         );
@@ -52,7 +53,7 @@ class SettingsCrudTest extends TestCase
                     'key' => 'items_per_page',
                     'value' => '50',
                 ],
-            ]
+            ],
         ];
 
         $response = $this->actingAs($this->user)
@@ -74,7 +75,7 @@ class SettingsCrudTest extends TestCase
                     'key' => 'new_setting',
                     'value' => 'New Value',
                 ],
-            ]
+            ],
         ];
 
         $response = $this->actingAs($this->user)

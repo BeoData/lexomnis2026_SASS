@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class TenantCrudTest extends TestCase
@@ -19,7 +20,7 @@ class TenantCrudTest extends TestCase
         parent::setUp();
 
         // Create super admin user for testing
-        $this->user = User::factory()->create([
+        $this->user = User::factory()->superAdmin()->create([
             'email' => 'superadmin@lexomnis.com',
             'password' => bcrypt('password'),
         ]);
@@ -46,7 +47,7 @@ class TenantCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Tenants/Index')
                 ->has('tenants')
         );
@@ -59,7 +60,7 @@ class TenantCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Tenants/Create')
         );
     }
@@ -140,7 +141,7 @@ class TenantCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Tenants/Show')
                 ->has('tenant')
         );
@@ -165,7 +166,7 @@ class TenantCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Tenants/Edit')
                 ->has('tenant')
         );

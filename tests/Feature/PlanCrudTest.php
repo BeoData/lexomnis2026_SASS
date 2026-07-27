@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class PlanCrudTest extends TestCase
@@ -19,7 +20,7 @@ class PlanCrudTest extends TestCase
         parent::setUp();
 
         // Create super admin user for testing
-        $this->user = User::factory()->create([
+        $this->user = User::factory()->superAdmin()->create([
             'email' => 'superadmin@lexomnis.com',
             'password' => bcrypt('password'),
         ]);
@@ -47,7 +48,7 @@ class PlanCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Plans/Index')
                 ->has('plans')
         );
@@ -60,7 +61,7 @@ class PlanCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Plans/Create')
         );
     }
@@ -136,7 +137,7 @@ class PlanCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Plans/Show')
                 ->has('plan')
         );
@@ -162,7 +163,7 @@ class PlanCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Plans/Edit')
                 ->has('plan')
         );
@@ -229,4 +230,3 @@ class PlanCrudTest extends TestCase
         $response->assertRedirect('/login');
     }
 }
-

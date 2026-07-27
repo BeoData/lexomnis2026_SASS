@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class UserCrudTest extends TestCase
@@ -19,7 +20,7 @@ class UserCrudTest extends TestCase
         parent::setUp();
 
         // Create super admin user for testing
-        $this->user = User::factory()->create([
+        $this->user = User::factory()->superAdmin()->create([
             'email' => 'superadmin@lexomnis.com',
             'password' => bcrypt('password'),
         ]);
@@ -58,7 +59,7 @@ class UserCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Users/Index')
                 ->has('users')
                 ->has('tenants')
@@ -86,7 +87,7 @@ class UserCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(
-            fn(\Inertia\Testing\AssertableInertia $page) => $page
+            fn (AssertableInertia $page) => $page
                 ->component('Users/Show')
                 ->has('user')
         );
@@ -188,4 +189,3 @@ class UserCrudTest extends TestCase
         $response->assertRedirect('/login');
     }
 }
-
