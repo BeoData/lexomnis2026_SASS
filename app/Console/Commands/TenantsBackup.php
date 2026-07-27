@@ -2,48 +2,52 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Tenant;
-use Symfony\Component\Process\Process;
-use Illuminate\Support\Facades\Storage;
+use App\Services\TenantAppApiService;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\Process\Process;
 
 class TenantsBackup extends Command
 {
     protected $signature = 'tenants:backup {--tenant=}';
+
     protected $description = 'Create SQL dump backups for all tenants and store in storage/app/backups';
 
-    public function handle()
+    public function handle(TenantAppApiService $apiService)
     {
         $tenantId = $this->option('tenant');
 
         $tenants = $tenantId ? Tenant::where('id', $tenantId)->get() : Tenant::where('active', true)->get();
 
         $backupDir = storage_path('app/backups');
-        if (!is_dir($backupDir)) {
+        if (! is_dir($backupDir)) {
             mkdir($backupDir, 0750, true);
         }
 
         foreach ($tenants as $tenant) {
-            $this->info("Backing up tenant {$tenant->tenant_key} ({$tenant->db_name})");
+            $credentials = $this->credentialsFor($tenant, $apiService);
+            $this->info("Backing up tenant {$tenant->tenant_key} ({$credentials['db_name']})");
 
-            $password = $tenant->decrypted_password ?? null;
-            if (!$password) {
+            $password = $credentials['db_password'];
+            if (! $credentials['from_main'] && ! $password) {
                 try {
                     $password = Crypt::decryptString($tenant->db_password);
                 } catch (\Throwable $e) {
                     $this->error("Could not decrypt password for tenant {$tenant->tenant_key}");
                     Log::error('Tenant backup decryption failed', ['tenant' => $tenant->tenant_key, 'error' => $e->getMessage()]);
+
                     continue;
                 }
             }
 
-            $host = $tenant->db_host ?? '127.0.0.1';
-            $port = $tenant->db_port ?? '3306';
-            $user = $tenant->db_user ?? 'root';
-            $db = $tenant->db_name;
+            $host = $credentials['db_host'] ?? '127.0.0.1';
+            $port = $credentials['db_port'] ?? '3306';
+            $user = $credentials['db_user'] ?? 'root';
+            $db = $credentials['db_name'];
 
             $timestamp = date('Ymd_His');
             $fileName = "{$tenant->tenant_key}_{$timestamp}.sql.gz";
@@ -61,10 +65,11 @@ class TenantsBackup extends Command
 
             try {
                 $process->run();
-                if (!$process->isSuccessful()) {
-                    $this->error("mysqldump failed for {$tenant->tenant_key}: " . $process->getErrorOutput());
+                if (! $process->isSuccessful()) {
+                    $this->error("mysqldump failed for {$tenant->tenant_key}: ".$process->getErrorOutput());
                     Log::error('mysqldump failed', ['tenant' => $tenant->tenant_key, 'error' => $process->getErrorOutput()]);
                     @unlink($tmp);
+
                     continue;
                 }
 
@@ -80,7 +85,7 @@ class TenantsBackup extends Command
                         Storage::disk('s3')->put("backups/{$fileName}", $gz);
                         $this->info("Backup uploaded to S3: backups/{$fileName}");
                     } catch (\Throwable $e) {
-                        $this->error("S3 upload failed for {$tenant->tenant_key}: " . $e->getMessage());
+                        $this->error("S3 upload failed for {$tenant->tenant_key}: ".$e->getMessage());
                         Log::error('S3 upload failed', ['tenant' => $tenant->tenant_key, 'error' => $e->getMessage()]);
                     }
                 }
@@ -99,7 +104,7 @@ class TenantsBackup extends Command
                 }
 
             } catch (\Throwable $e) {
-                $this->error("Error backing up {$tenant->tenant_key}: " . $e->getMessage());
+                $this->error("Error backing up {$tenant->tenant_key}: ".$e->getMessage());
                 Log::error('Tenant backup error', ['tenant' => $tenant->tenant_key, 'error' => $e->getMessage()]);
             } finally {
                 @unlink($tmp);
@@ -107,5 +112,36 @@ class TenantsBackup extends Command
         }
 
         return 0;
+    }
+
+    private function credentialsFor(Tenant $tenant, TenantAppApiService $apiService): array
+    {
+        $local = [
+            'db_driver' => $tenant->db_driver,
+            'db_host' => $tenant->db_host,
+            'db_port' => $tenant->db_port,
+            'db_name' => $tenant->db_name,
+            'db_user' => $tenant->db_user,
+            'db_password' => $tenant->decrypted_password,
+            'from_main' => false,
+        ];
+
+        try {
+            $response = $apiService->getTenantCredentials((int) $tenant->id);
+            $credentials = $response['data']['data'] ?? null;
+
+            if (($response['success'] ?? false)
+                && ($response['data']['success'] ?? false)
+                && is_array($credentials)) {
+                return array_merge($local, $credentials, ['from_main' => true]);
+            }
+        } catch (\Throwable $e) {
+            $response = ['error' => $e->getMessage()];
+        }
+
+        $error = $response['error'] ?? $response['data']['error'] ?? 'unknown';
+        Log::warning('Using potentially stale local credentials for tenant '.$tenant->id.' - main app unreachable: '.$error);
+
+        return $local;
     }
 }

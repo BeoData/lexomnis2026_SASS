@@ -148,7 +148,7 @@ class TenantAppApiService
 
                 Log::info('TenantAppApiService response', [
                     'status' => $response->status(),
-                    'body' => $response->body(),
+                    'body' => $this->responseBodyForLog($response, $endpoint),
                     'successful' => $response->successful(),
                 ]);
 
@@ -226,6 +226,20 @@ class TenantAppApiService
         ];
     }
 
+    protected function responseBodyForLog(Response $response, string $endpoint): mixed
+    {
+        if (! str_ends_with($endpoint, '/credentials')) {
+            return $response->body();
+        }
+
+        $body = $response->json();
+        if (is_array($body) && data_get($body, 'data.db_password') !== null) {
+            data_set($body, 'data.db_password', '[REDACTED]');
+        }
+
+        return $body;
+    }
+
     // Tenant Management
     public function getTenants(array $filters = []): array
     {
@@ -235,6 +249,11 @@ class TenantAppApiService
     public function getTenant(int $id): array
     {
         return $this->request('GET', "tenants/{$id}");
+    }
+
+    public function getTenantCredentials(int $tenantId): array
+    {
+        return $this->request('GET', "tenants/{$tenantId}/credentials");
     }
 
     public function createTenant(array $data): array

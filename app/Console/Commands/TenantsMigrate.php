@@ -2,26 +2,28 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Tenant;
+use App\Services\TenantAppApiService;
+use App\Services\TenantManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
-use App\Models\Tenant;
-use App\Services\TenantManager;
+use Illuminate\Support\Facades\Log;
 
 class TenantsMigrate extends Command
 {
     protected $signature = 'tenants:migrate {--tenant=}';
+
     protected $description = 'Run migrations for all tenants or single tenant';
 
-    public function handle()
+    public function handle(TenantAppApiService $apiService)
     {
         $tenantId = $this->option('tenant');
 
         $tenants = $tenantId ? Tenant::where('id', $tenantId)->get() : Tenant::where('active', true)->get();
 
         foreach ($tenants as $tenant) {
-            $this->info("Migrating tenant {$tenant->tenant_key} ({$tenant->db_name})");
-            $data = $tenant->toArray();
-            $data['db_password'] = $tenant->decrypted_password ?? $tenant->db_password ?? null;
+            $data = $this->credentialsFor($tenant, $apiService);
+            $this->info("Migrating tenant {$tenant->tenant_key} ({$data['db_name']})");
             TenantManager::setConnectionFromArray($data);
 
             try {
@@ -36,5 +38,35 @@ class TenantsMigrate extends Command
         }
 
         return 0;
+    }
+
+    private function credentialsFor(Tenant $tenant, TenantAppApiService $apiService): array
+    {
+        $local = $tenant->only([
+            'db_driver',
+            'db_host',
+            'db_port',
+            'db_name',
+            'db_user',
+        ]);
+        $local['db_password'] = $tenant->decrypted_password ?? $tenant->db_password ?? null;
+
+        try {
+            $response = $apiService->getTenantCredentials((int) $tenant->id);
+            $credentials = $response['data']['data'] ?? null;
+
+            if (($response['success'] ?? false)
+                && ($response['data']['success'] ?? false)
+                && is_array($credentials)) {
+                return array_merge($local, $credentials);
+            }
+        } catch (\Throwable $e) {
+            $response = ['error' => $e->getMessage()];
+        }
+
+        $error = $response['error'] ?? $response['data']['error'] ?? 'unknown';
+        Log::warning('Using potentially stale local credentials for tenant '.$tenant->id.' - main app unreachable: '.$error);
+
+        return $local;
     }
 }
