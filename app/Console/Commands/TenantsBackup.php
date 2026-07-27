@@ -32,6 +32,19 @@ class TenantsBackup extends Command
             $credentials = $this->credentialsFor($tenant, $apiService);
             $this->info("Backing up tenant {$tenant->tenant_key} ({$credentials['db_name']})");
 
+            if (($credentials['db_driver'] ?? null) === 'sqlite') {
+                $response = $apiService->backupTenantDatabase($this->mainFirmId($tenant));
+                if (! ($response['success'] ?? false) || ! ($response['data']['success'] ?? false)) {
+                    $this->error("Main app failed to back up SQLite tenant {$tenant->tenant_key}: ".($response['error'] ?? 'unknown'));
+
+                    continue;
+                }
+
+                $this->info("SQLite backup completed in main app: {$tenant->tenant_key}");
+
+                continue;
+            }
+
             $password = $credentials['db_password'];
             if (! $credentials['from_main'] && ! $password) {
                 try {
@@ -127,7 +140,7 @@ class TenantsBackup extends Command
         ];
 
         try {
-            $response = $apiService->getTenantCredentials((int) $tenant->id);
+            $response = $apiService->getTenantCredentials($this->mainFirmId($tenant));
             $credentials = $response['data']['data'] ?? null;
 
             if (($response['success'] ?? false)
@@ -143,5 +156,10 @@ class TenantsBackup extends Command
         Log::warning('Using potentially stale local credentials for tenant '.$tenant->id.' - main app unreachable: '.$error);
 
         return $local;
+    }
+
+    private function mainFirmId(Tenant $tenant): int
+    {
+        return (int) ($tenant->main_firm_id ?: $tenant->id);
     }
 }

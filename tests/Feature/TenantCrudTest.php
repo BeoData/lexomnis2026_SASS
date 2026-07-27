@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\TenantRegistrySyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia;
+use Mockery;
 use Tests\TestCase;
 
 class TenantCrudTest extends TestCase
@@ -67,6 +69,10 @@ class TenantCrudTest extends TestCase
 
     public function test_it_can_create_a_new_tenant()
     {
+        $registry = Mockery::mock(TenantRegistrySyncService::class);
+        $registry->shouldReceive('syncByMainId')->once()->with(1);
+        $this->app->instance(TenantRegistrySyncService::class, $registry);
+
         // Mock successful API response
         Http::fake([
             '*/api/admin/tenants' => Http::response([

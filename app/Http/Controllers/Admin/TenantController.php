@@ -3,16 +3,22 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncTenantFromMain;
 use App\Services\TenantAppApiService;
+use App\Services\TenantRegistrySyncService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class TenantController extends Controller
 {
     protected TenantAppApiService $apiService;
 
-    public function __construct(TenantAppApiService $apiService)
-    {
+    public function __construct(
+        TenantAppApiService $apiService,
+        private readonly TenantRegistrySyncService $tenantRegistry,
+    ) {
         $this->apiService = $apiService;
     }
 
@@ -21,7 +27,7 @@ class TenantController extends Controller
         $filters = $request->only(['status', 'search', 'plan_id']);
         $response = $this->apiService->getTenants($filters);
 
-        if (!$response['success']) {
+        if (! $response['success']) {
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to fetch tenants']);
         }
 
@@ -48,9 +54,10 @@ class TenantController extends Controller
 
         // Group plans by plan_key manually
         $groupedPlans = [];
-        if (is_array($plans) && !empty($plans)) {
+        if (is_array($plans) && ! empty($plans)) {
             $grouped = collect($plans)->groupBy('plan_key')->map(function ($group, $planKey) {
                 $first = $group->first();
+
                 return [
                     'plan_key' => $planKey,
                     'name' => $first['name'] ?? '',
@@ -99,7 +106,7 @@ class TenantController extends Controller
 
         // Generate password if not provided
         if (empty($validated['password'])) {
-            $validated['password'] = \Illuminate\Support\Str::random(12);
+            $validated['password'] = Str::random(12);
             \Log::info('Password auto-generated for tenant', ['email' => $validated['email']]);
         }
 
@@ -119,16 +126,23 @@ class TenantController extends Controller
 
             \Log::info('API response', ['response' => $response]);
 
-            if (!$response['success']) {
+            if (! $response['success']) {
                 \Log::error('Failed to create tenant', ['error' => $response['error'] ?? 'Unknown error', 'status' => $response['status'] ?? null]);
+
                 return back()->withErrors(['error' => $response['error'] ?? 'Failed to create tenant']);
+            }
+
+            $mainFirmId = (int) data_get($response, 'data.id');
+            if ($mainFirmId > 0) {
+                $this->syncOrQueue($mainFirmId);
             }
 
             return redirect()->route('tenants.index')
                 ->with('success', 'Tenant created successfully');
         } catch (\Exception $e) {
             \Log::error('Exception creating tenant', ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return back()->withErrors(['error' => 'An error occurred: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'An error occurred: '.$e->getMessage()]);
         }
     }
 
@@ -136,14 +150,14 @@ class TenantController extends Controller
     {
         $response = $this->apiService->getTenant((int) $id);
 
-        if (!$response['success']) {
+        if (! $response['success']) {
             return back()->withErrors(['error' => $response['error'] ?? 'Tenant not found']);
         }
 
         $tenant = $response['data'] ?? [];
 
         // Ensure tenant users are present for the admin UI (some API responses omit nested users)
-        if (empty($tenant['users']) || !is_array($tenant['users'])) {
+        if (empty($tenant['users']) || ! is_array($tenant['users'])) {
             $usersResponse = $this->apiService->getUsers(['tenant_id' => (int) $id, 'per_page' => 100]);
             if ($usersResponse['success']) {
                 // If paginated, extract data
@@ -178,7 +192,7 @@ class TenantController extends Controller
     {
         $response = $this->apiService->getTenant((int) $id);
 
-        if (!$response['success']) {
+        if (! $response['success']) {
             return back()->withErrors(['error' => $response['error'] ?? 'Tenant not found']);
         }
 
@@ -214,14 +228,14 @@ class TenantController extends Controller
 
         // Separate tenant data from plan assignment
         $tenantData = array_filter($validated, function ($key) {
-            return !in_array($key, ['plan_id', 'billing_period']);
+            return ! in_array($key, ['plan_id', 'billing_period']);
         }, ARRAY_FILTER_USE_KEY);
 
         // Update tenant if there are tenant fields to update
-        if (!empty($tenantData)) {
+        if (! empty($tenantData)) {
             $response = $this->apiService->updateTenant((int) $id, $tenantData);
 
-            if (!$response['success']) {
+            if (! $response['success']) {
                 return back()->withErrors(['error' => $response['error'] ?? 'Failed to update tenant']);
             }
         }
@@ -234,10 +248,12 @@ class TenantController extends Controller
                 $validated['billing_period'] ?? null
             );
 
-            if (!$planResponse['success']) {
+            if (! $planResponse['success']) {
                 return back()->withErrors(['error' => $planResponse['error'] ?? 'Failed to assign plan to tenant']);
             }
         }
+
+        $this->syncOrQueue((int) $id);
 
         return redirect()->route('tenants.show', $id)
             ->with('success', 'Tenant updated successfully');
@@ -247,9 +263,11 @@ class TenantController extends Controller
     {
         $response = $this->apiService->suspendTenant((int) $id);
 
-        if (!$response['success']) {
+        if (! $response['success']) {
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to suspend tenant']);
         }
+
+        $this->syncOrQueue((int) $id);
 
         return back()->with('success', 'Tenant suspended successfully');
     }
@@ -258,9 +276,11 @@ class TenantController extends Controller
     {
         $response = $this->apiService->activateTenant((int) $id);
 
-        if (!$response['success']) {
+        if (! $response['success']) {
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to activate tenant']);
         }
+
+        $this->syncOrQueue((int) $id);
 
         return back()->with('success', 'Tenant activated successfully');
     }
@@ -269,12 +289,35 @@ class TenantController extends Controller
     {
         $response = $this->apiService->deleteTenant((int) $id);
 
-        if (!$response['success']) {
+        if (! $response['success']) {
             return back()->withErrors(['error' => $response['error'] ?? 'Failed to delete tenant']);
         }
 
+        $this->tenantRegistry->removeLocal((int) $id);
+
         return redirect()->route('tenants.index')
             ->with('success', 'Tenant deleted successfully');
+    }
+
+    private function syncOrQueue(int $mainFirmId): void
+    {
+        try {
+            $this->tenantRegistry->syncByMainId($mainFirmId);
+        } catch (\Throwable $exception) {
+            Log::warning('Immediate tenant registry sync failed; retry queued', [
+                'main_firm_id' => $mainFirmId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            try {
+                SyncTenantFromMain::dispatch($mainFirmId);
+            } catch (\Throwable $queueException) {
+                Log::error('Unable to queue tenant registry sync retry', [
+                    'main_firm_id' => $mainFirmId,
+                    'error' => $queueException->getMessage(),
+                ]);
+            }
+        }
     }
 
     public function impersonate(string $id)
@@ -282,7 +325,7 @@ class TenantController extends Controller
         // Request impersonation token from tenant app
         $response = $this->apiService->generateTenantImpersonationToken((int) $id, false);
 
-        if (!$response['success']) {
+        if (! $response['success']) {
             return response()->json(['error' => $response['error'] ?? 'Failed to generate impersonation token'], 400);
         }
 
@@ -292,7 +335,7 @@ class TenantController extends Controller
             // Return the impersonate URL as JSON so client can open it in new tab
             return response()->json([
                 'impersonate_url' => $impersonateUrl,
-                'success' => true
+                'success' => true,
             ]);
         }
 

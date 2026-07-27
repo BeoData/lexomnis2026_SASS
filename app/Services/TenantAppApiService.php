@@ -256,6 +256,23 @@ class TenantAppApiService
         return $this->request('GET', "tenants/{$tenantId}/credentials");
     }
 
+    public function backupTenantDatabase(int $tenantId): array
+    {
+        return $this->request('POST', "tenants/{$tenantId}/maintenance/backup");
+    }
+
+    public function migrateTenantDatabase(int $tenantId): array
+    {
+        return $this->request('POST', "tenants/{$tenantId}/maintenance/migrate");
+    }
+
+    public function deleteTenantDatabase(int $tenantId, string $database): array
+    {
+        return $this->request('DELETE', "tenants/{$tenantId}/maintenance/database", [
+            'confirm_database' => $database,
+        ]);
+    }
+
     public function createTenant(array $data): array
     {
         return $this->request('POST', 'tenants', $data);

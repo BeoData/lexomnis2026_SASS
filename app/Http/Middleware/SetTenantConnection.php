@@ -2,25 +2,25 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Tenant;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
-use App\Models\Tenant;
+use Illuminate\Support\Facades\DB;
 
 class SetTenantConnection
 {
     public function handle(Request $request, Closure $next)
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return $next($request);
         }
 
         $tenantLookup = $user->tenant_id ?? $user->tenant_key ?? null;
-        if (!$tenantLookup) {
+        if (! $tenantLookup) {
             return $next($request);
         }
 
@@ -32,25 +32,29 @@ class SetTenantConnection
         if ($useForever) {
             $tenantConfig = Cache::rememberForever($cacheKey, function () use ($tenantLookup) {
                 if (is_numeric($tenantLookup)) {
-                    return Tenant::find($tenantLookup);
+                    return Tenant::where('main_firm_id', $tenantLookup)->first()
+                        ?? Tenant::find($tenantLookup);
                 }
+
                 return Tenant::where('tenant_key', $tenantLookup)->first();
             });
         } else {
             $tenantConfig = Cache::remember($cacheKey, $ttl, function () use ($tenantLookup) {
                 if (is_numeric($tenantLookup)) {
-                    return Tenant::find($tenantLookup);
+                    return Tenant::where('main_firm_id', $tenantLookup)->first()
+                        ?? Tenant::find($tenantLookup);
                 }
+
                 return Tenant::where('tenant_key', $tenantLookup)->first();
             });
         }
 
-        if (!$tenantConfig) {
+        if (! $tenantConfig) {
             abort(403, 'Tenant not found.');
         }
 
         $password = $tenantConfig->decrypted_password ?? null;
-        if (!$password && $tenantConfig->db_password) {
+        if (! $password && $tenantConfig->db_password) {
             try {
                 $password = Crypt::decryptString($tenantConfig->db_password);
             } catch (\Throwable $e) {

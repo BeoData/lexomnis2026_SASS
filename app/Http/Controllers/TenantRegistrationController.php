@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SyncTenantFromMain;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\TenantAppApiService;
+use App\Services\TenantRegistrySyncService;
 use App\Support\TenantAppUrl;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
@@ -18,8 +20,10 @@ class TenantRegistrationController extends Controller
 {
     protected TenantAppApiService $apiService;
 
-    public function __construct(TenantAppApiService $apiService)
-    {
+    public function __construct(
+        TenantAppApiService $apiService,
+        private readonly TenantRegistrySyncService $tenantRegistry,
+    ) {
         $this->apiService = $apiService;
     }
 
@@ -176,6 +180,11 @@ class TenantRegistrationController extends Controller
             ]);
 
             if ($response->successful() && ($data['success'] ?? false)) {
+                $mainFirmId = (int) data_get($data, 'data.id');
+                if ($mainFirmId > 0) {
+                    $this->syncOrQueue($mainFirmId);
+                }
+
                 // 1. Create user in SASS database (for billing, profile, upgrades)
                 // This user is NOT a SuperAdmin, just a client.
                 $user = User::updateOrCreate(
@@ -367,6 +376,27 @@ class TenantRegistrationController extends Controller
             ]);
 
             return back()->withErrors(['error' => 'Došlo je do greške. Molimo pokušajte ponovo.']);
+        }
+    }
+
+    private function syncOrQueue(int $mainFirmId): void
+    {
+        try {
+            $this->tenantRegistry->syncByMainId($mainFirmId);
+        } catch (\Throwable $exception) {
+            Log::warning('Immediate public-registration tenant sync failed; retry queued', [
+                'main_firm_id' => $mainFirmId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            try {
+                SyncTenantFromMain::dispatch($mainFirmId);
+            } catch (\Throwable $queueException) {
+                Log::error('Unable to queue public-registration tenant sync retry', [
+                    'main_firm_id' => $mainFirmId,
+                    'error' => $queueException->getMessage(),
+                ]);
+            }
         }
     }
 }
