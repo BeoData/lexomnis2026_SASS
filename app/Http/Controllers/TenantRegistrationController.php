@@ -267,14 +267,18 @@ class TenantRegistrationController extends Controller
     {
         try {
             $baseUrl = Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+            $apiToken = Setting::getByKey('tenant_app_api_token') ?: config('services.tenant_app.api_token');
             $baseUrl = TenantAppUrl::normalize($baseUrl);
             $apiUrl = "{$baseUrl}/api/public/tenants/verify-email";
 
-            $response = Http::withHeaders([
+            $http = Http::withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
-            ])
-                ->post($apiUrl, ['token' => $token]);
+            ]);
+            if (! empty($apiToken)) {
+                $http = $http->withToken($apiToken);
+            }
+            $response = $http->post($apiUrl, ['token' => $token]);
 
             $data = $response->json();
 
@@ -354,14 +358,18 @@ class TenantRegistrationController extends Controller
 
         try {
             $baseUrl = Setting::getByKey('tenant_app_url') ?: config('services.tenant_app.url');
+            $apiToken = Setting::getByKey('tenant_app_api_token') ?: config('services.tenant_app.api_token');
             $baseUrl = TenantAppUrl::normalize($baseUrl);
             $apiUrl = "{$baseUrl}/api/public/tenants/resend-verification";
 
-            $response = Http::withHeaders([
+            $http = Http::withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
-            ])
-                ->post($apiUrl, $validated);
+            ]);
+            if (! empty($apiToken)) {
+                $http = $http->withToken($apiToken);
+            }
+            $response = $http->post($apiUrl, $validated);
 
             $data = $response->json();
 

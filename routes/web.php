@@ -18,9 +18,12 @@ Route::get('/pricing', [App\Http\Controllers\PricingController::class, 'index'])
 
 // Public tenant registration
 Route::get('/register', [App\Http\Controllers\TenantRegistrationController::class, 'index'])->name('tenant.register');
-Route::post('/register', [App\Http\Controllers\TenantRegistrationController::class, 'store'])->name('tenant.register.store');
-Route::get('/verify-email/{token}', [App\Http\Controllers\TenantRegistrationController::class, 'verifyEmail'])->name('tenant.verify-email');
-Route::post('/resend-verification', [App\Http\Controllers\TenantRegistrationController::class, 'resendVerification'])->name('tenant.resend-verification');
+Route::post('/register', [App\Http\Controllers\TenantRegistrationController::class, 'store'])
+    ->middleware('throttle:5,1')->name('tenant.register.store');
+Route::get('/verify-email/{token}', [App\Http\Controllers\TenantRegistrationController::class, 'verifyEmail'])
+    ->middleware('throttle:10,1')->name('tenant.verify-email');
+Route::post('/resend-verification', [App\Http\Controllers\TenantRegistrationController::class, 'resendVerification'])
+    ->middleware('throttle:3,1')->name('tenant.resend-verification');
 Route::get('/register/success', [TenantRegistrationController::class, 'success'])->name('tenant.register.success');
 
 // ============================================================

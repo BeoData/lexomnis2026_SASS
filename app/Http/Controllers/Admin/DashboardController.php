@@ -17,15 +17,6 @@ class DashboardController extends Controller
 
     public function index()
     {
-        // Safety check: Only SuperAdmin should be on port 8000 Dashboard
-        // You can change 'admin@lexomnis.com' to your actual admin email
-        $user = auth()->user();
-        if ($user->email !== 'admin@lexomnis.com' && 
-            $user->email !== 'superadmin@lexomnis.com' && 
-            !str_ends_with($user->email, '@lexomnis.rs')) {
-            abort(403, 'Unauthorized access to Super Admin dashboard.');
-        }
-
         $data = $this->apiService->getDashboardData();
 
         return Inertia::render('Dashboard', [
