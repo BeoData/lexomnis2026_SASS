@@ -19,6 +19,7 @@ class TenantsBackup extends Command
 
     public function handle(TenantAppApiService $apiService)
     {
+        $failed = false;
         $tenantId = $this->option('tenant');
 
         $tenants = $tenantId ? Tenant::where('id', $tenantId)->get() : Tenant::where('active', true)->get();
@@ -36,6 +37,7 @@ class TenantsBackup extends Command
                 $response = $apiService->backupTenantDatabase($this->mainFirmId($tenant));
                 if (! ($response['success'] ?? false) || ! ($response['data']['success'] ?? false)) {
                     $this->error("Main app failed to back up SQLite tenant {$tenant->tenant_key}: ".($response['error'] ?? 'unknown'));
+                    $failed = true;
 
                     continue;
                 }
@@ -52,6 +54,7 @@ class TenantsBackup extends Command
                 } catch (\Throwable $e) {
                     $this->error("Could not decrypt password for tenant {$tenant->tenant_key}");
                     Log::error('Tenant backup decryption failed', ['tenant' => $tenant->tenant_key, 'error' => $e->getMessage()]);
+                    $failed = true;
 
                     continue;
                 }
@@ -82,6 +85,7 @@ class TenantsBackup extends Command
                     $this->error("mysqldump failed for {$tenant->tenant_key}: ".$process->getErrorOutput());
                     Log::error('mysqldump failed', ['tenant' => $tenant->tenant_key, 'error' => $process->getErrorOutput()]);
                     @unlink($tmp);
+                    $failed = true;
 
                     continue;
                 }
@@ -119,12 +123,13 @@ class TenantsBackup extends Command
             } catch (\Throwable $e) {
                 $this->error("Error backing up {$tenant->tenant_key}: ".$e->getMessage());
                 Log::error('Tenant backup error', ['tenant' => $tenant->tenant_key, 'error' => $e->getMessage()]);
+                $failed = true;
             } finally {
                 @unlink($tmp);
             }
         }
 
-        return 0;
+        return $failed ? self::FAILURE : self::SUCCESS;
     }
 
     private function credentialsFor(Tenant $tenant, TenantAppApiService $apiService): array

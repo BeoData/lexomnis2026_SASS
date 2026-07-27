@@ -67,20 +67,27 @@ class TenantsDelete extends Command
                 if (($dropCredentials['db_driver'] ?? null) !== 'sqlite'
                     && (! env('DB_ADMIN_USER') || ! env('DB_ADMIN_PASSWORD'))) {
                     $this->error('DB admin credentials not configured in env (DB_ADMIN_USER / DB_ADMIN_PASSWORD). Aborting hard delete.');
-                    Log::warning('Hard delete aborted due to missing DB admin credentials', ['tenant' => $key]);
+                    Log::warning('Hard delete aborted due to missing DB admin credentials', [
+                        'firm_id' => $this->mainFirmId($tenant),
+                        'tenant' => $key,
+                    ]);
 
                     return self::FAILURE;
                 }
             }
 
-            if ($doBackup) {
-                $this->info('Creating backup for tenant...');
-                Artisan::call('tenants:backup', ['--tenant' => $tenant->id]);
-                $this->info('Backup finished (check logs).');
-            } else {
-                $this->warn('No backup requested; creating one automatically.');
-                Artisan::call('tenants:backup', ['--tenant' => $tenant->id]);
+            $this->info($doBackup ? 'Creating requested backup for tenant...' : 'Creating mandatory backup before hard delete...');
+            $backupExitCode = Artisan::call('tenants:backup', ['--tenant' => $tenant->id]);
+            if ($backupExitCode !== self::SUCCESS) {
+                $this->error('Backup failed. Hard delete aborted.');
+                Log::warning('Tenant hard delete aborted because backup failed', [
+                    'firm_id' => $this->mainFirmId($tenant),
+                    'tenant' => $key,
+                ]);
+
+                return self::FAILURE;
             }
+            $this->info('Backup finished.');
 
             try {
                 $data = $tenant->only([
@@ -108,7 +115,14 @@ class TenantsDelete extends Command
                 $data['archived_at'] = now();
                 DB::table('tenants_archive')->insert($data);
             } catch (\Throwable $e) {
-                Log::error('Archiving tenant failed', ['tenant' => $key, 'error' => $e->getMessage()]);
+                $this->error('Failed to archive tenant. Hard delete aborted.');
+                Log::error('Archiving tenant failed', [
+                    'firm_id' => $this->mainFirmId($tenant),
+                    'tenant' => $key,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return self::FAILURE;
             }
 
             $deleteResponse = $apiService->deleteTenant($this->mainFirmId($tenant));
@@ -142,7 +156,11 @@ class TenantsDelete extends Command
                         $pdo->exec("DROP DATABASE IF EXISTS `{$quotedDbName}`");
                     } catch (\Throwable $e) {
                         $this->error('Failed to drop database: '.$e->getMessage());
-                        Log::error('Drop database failed', ['tenant' => $key, 'error' => $e->getMessage()]);
+                        Log::error('Drop database failed', [
+                            'firm_id' => $this->mainFirmId($tenant),
+                            'tenant' => $key,
+                            'error' => $e->getMessage(),
+                        ]);
 
                         return self::FAILURE;
                     }
@@ -154,12 +172,21 @@ class TenantsDelete extends Command
             try {
                 $tenant->forceDelete();
             } catch (\Throwable $e) {
-                Log::error('Deleting tenant record failed', ['tenant' => $key, 'error' => $e->getMessage()]);
+                Log::error('Deleting tenant record failed', [
+                    'firm_id' => $this->mainFirmId($tenant),
+                    'tenant' => $key,
+                    'error' => $e->getMessage(),
+                ]);
 
                 return self::FAILURE;
             }
 
             $this->info("Tenant {$key} removed from main and local registries and archived.");
+            Log::info('Tenant hard delete completed', [
+                'firm_id' => $this->mainFirmId($tenant),
+                'tenant' => $key,
+                'database_dropped' => $dropDb,
+            ]);
 
             return self::SUCCESS;
         }
