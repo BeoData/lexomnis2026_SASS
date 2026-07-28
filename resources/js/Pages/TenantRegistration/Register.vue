@@ -119,16 +119,32 @@
 
                                 <div class="grid grid-cols-3 gap-4">
                                     <div>
-                                        <label for="country" class="block text-sm font-medium text-gray-700">
-                                            Država
+                                        <label for="registration_country" class="block text-sm font-medium text-gray-700">
+                                            {{ registration_texts.country_label }}
                                         </label>
-                                        <input
-                                            id="country"
-                                            v-model="form.country"
-                                            type="text"
-                                            value="RS"
-                                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                        />
+                                        <div class="relative mt-1">
+                                            <select
+                                                id="registration_country"
+                                                v-model="form.country"
+                                                name="country"
+                                                autocomplete="country"
+                                                class="block min-h-11 w-full cursor-pointer appearance-none rounded-md border bg-white px-3 py-2 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                                :class="form.errors.country ? 'border-red-500' : 'border-gray-300'"
+                                                :aria-invalid="Boolean(form.errors.country)"
+                                                aria-describedby="registration_country_error"
+                                            >
+                                                <option value="" disabled>{{ registration_texts.country_placeholder }}</option>
+                                                <option v-for="country in countries" :key="country.value" :value="country.value">
+                                                    {{ country.label }}
+                                                </option>
+                                            </select>
+                                            <svg aria-hidden="true" class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M5.22 7.47a.75.75 0 0 1 1.06 0L10 11.19l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <p v-if="form.errors.country" id="registration_country_error" class="mt-1 text-sm text-red-600">
+                                            {{ form.errors.country }}
+                                        </p>
                                     </div>
                                     <div>
                                         <label for="timezone" class="block text-sm font-medium text-gray-700">
@@ -382,6 +398,14 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    countries: {
+        type: Array,
+        default: () => [],
+    },
+    registration_texts: {
+        type: Object,
+        required: true,
+    },
 });
 
 const subscriptionType = ref(props.initial_registration_type || 'trial');
@@ -403,7 +427,7 @@ const form = useForm({
     password: '',
     password_confirmation: '',
     phone: '',
-    country: 'RS',
+    country: '',
     timezone: 'Europe/Belgrade',
     currency: 'RSD',
     vat_status: '',

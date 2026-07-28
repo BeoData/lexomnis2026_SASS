@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class TenantRegistrationWebTest extends TestCase
@@ -19,6 +20,7 @@ class TenantRegistrationWebTest extends TestCase
         $mockPaymentUrl = 'https://checkout.stripe.com/test_session_123';
 
         Http::fake([
+            '*/api/public/options/countries' => Http::response($this->countriesResponse()),
             '*/api/public/tenants/register' => Http::response([
                 'success' => true,
                 'data' => [
@@ -68,6 +70,7 @@ class TenantRegistrationWebTest extends TestCase
     {
         // Mock the tenant app API response
         Http::fake([
+            '*/api/public/options/countries' => Http::response($this->countriesResponse()),
             '*/api/public/tenants/register' => Http::response([
                 'success' => true,
                 'data' => [
@@ -114,6 +117,7 @@ class TenantRegistrationWebTest extends TestCase
     {
         // Mock the tenant app API response without payment_url
         Http::fake([
+            '*/api/public/options/countries' => Http::response($this->countriesResponse()),
             '*/api/public/tenants/register' => Http::response([
                 'success' => true,
                 'data' => [
@@ -164,6 +168,7 @@ class TenantRegistrationWebTest extends TestCase
     {
         // Mock the tenant app API response with error
         Http::fake([
+            '*/api/public/options/countries' => Http::response($this->countriesResponse()),
             '*/api/public/tenants/register' => Http::response([
                 'success' => false,
                 'errors' => [
@@ -204,6 +209,7 @@ class TenantRegistrationWebTest extends TestCase
     public function test_registration_requires_vat_status_and_forwards_it_to_main(): void
     {
         Http::fake([
+            '*/api/public/options/countries' => Http::response($this->countriesResponse()),
             '*/api/public/tenants/register' => Http::response([
                 'success' => true,
                 'data' => [
@@ -235,6 +241,96 @@ class TenantRegistrationWebTest extends TestCase
             ->assertSessionDoesntHaveErrors();
 
         Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/api/public/tenants/register')
+            && $request['vat_status'] === 'registered'
+            && $request['country'] === 'RS');
+    }
+
+    public function test_registration_page_loads_country_options_and_localized_texts(): void
+    {
+        Http::fake([
+            '*/api/admin/plans*' => Http::response([
+                'success' => true,
+                'data' => [],
+            ]),
+            '*/api/public/options/countries' => Http::response($this->countriesResponse()),
+        ]);
+
+        $this->get('/register')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('TenantRegistration/Register')
+                ->has('countries', 2)
+                ->where('countries.0.value', 'RS')
+                ->where('registration_texts.country_label', 'Firm country')
+                ->where('registration_texts.country_placeholder', 'Select country')
+            );
+
+        Http::assertSent(fn ($request): bool => str_ends_with(
+            $request->url(),
+            '/api/public/options/countries'
+        ));
+    }
+
+    public function test_country_is_required_validated_against_main_and_has_no_rs_fallback(): void
+    {
+        Http::fake([
+            '*/api/public/options/countries' => Http::response($this->countriesResponse()),
+            '*/api/public/tenants/register' => Http::response([
+                'success' => true,
+                'data' => [
+                    'id' => 11,
+                    'name' => 'Country Firm',
+                    'slug' => 'country-firm',
+                    'status' => 'active',
+                ],
+            ], 201),
+        ]);
+
+        $payload = [
+            'first_name' => 'Country',
+            'last_name' => 'Owner',
+            'email' => 'country-owner@example.test',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'timezone' => 'Europe/Belgrade',
+            'currency' => 'RSD',
+            'vat_status' => 'registered',
+            'registration_type' => 'trial',
+        ];
+
+        $this->post('/register', $payload)
+            ->assertSessionHasErrors('country');
+
+        $this->post('/register', [...$payload, 'country' => 'XX'])
+            ->assertSessionHasErrors('country');
+
+        $this->post('/register', [...$payload, 'country' => 'BA'])
+            ->assertRedirect(route('tenant.register.success'))
+            ->assertSessionDoesntHaveErrors();
+
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/api/public/tenants/register')
+            && $request['country'] === 'BA'
             && $request['vat_status'] === 'registered');
+    }
+
+    private function countriesResponse(): array
+    {
+        return [
+            'success' => true,
+            'data' => [
+                [
+                    'id' => 1,
+                    'value' => 'RS',
+                    'label' => 'Serbia',
+                    'metadata' => null,
+                ],
+                [
+                    'id' => 2,
+                    'value' => 'BA',
+                    'label' => 'Bosnia and Herzegovina',
+                    'metadata' => null,
+                ],
+            ],
+        ];
     }
 }

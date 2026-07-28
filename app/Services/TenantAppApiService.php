@@ -226,6 +226,115 @@ class TenantAppApiService
         ];
     }
 
+    protected function requestPublic(
+        string $method,
+        string $endpoint,
+        array $data = [],
+        array $headers = []
+    ): array {
+        if (Cache::has($this->downCacheKey())) {
+            return [
+                'success' => false,
+                'error' => 'Tenant App is unreachable (cached). Please try again shortly.',
+                'status' => 503,
+            ];
+        }
+
+        $url = rtrim($this->baseUrl, '/').'/'.ltrim($endpoint, '/');
+        $defaultHeaders = [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+        $headers = array_merge($defaultHeaders, $headers);
+        $attempt = 0;
+        $lastException = null;
+
+        while ($attempt < $this->retryAttempts) {
+            try {
+                Log::info('TenantAppApiService making public request', [
+                    'method' => $method,
+                    'url' => $url,
+                    'data' => $data,
+                    'attempt' => $attempt + 1,
+                ]);
+
+                $response = Http::connectTimeout($this->connectTimeout)
+                    ->timeout($this->timeout)
+                    ->withHeaders($headers)
+                    ->send($method, $url, ['json' => $data]);
+
+                Log::info('TenantAppApiService public response', [
+                    'status' => $response->status(),
+                    'body' => $this->responseBodyForLog($response, $endpoint),
+                    'successful' => $response->successful(),
+                ]);
+
+                if ($response->successful()) {
+                    return $response->json() ?? [];
+                }
+
+                if (in_array($response->status(), [401, 403])) {
+                    return [
+                        'success' => false,
+                        'error' => $response->json()['message'] ?? 'Unauthorized',
+                        'status' => $response->status(),
+                    ];
+                }
+
+                if ($response->serverError() && $attempt < $this->retryAttempts - 1) {
+                    $attempt++;
+                    usleep((int) ($this->retryDelayMs * 1000));
+
+                    continue;
+                }
+
+                return [
+                    'success' => false,
+                    'error' => $response->json()['message'] ?? 'Request failed',
+                    'status' => $response->status(),
+                    'data' => $response->json(),
+                ];
+            } catch (ConnectionException $e) {
+                $lastException = $e;
+                $attempt++;
+                $this->markTenantAppDown();
+
+                if ($this->isTimeoutException($e)) {
+                    break;
+                }
+
+                if ($attempt < $this->retryAttempts) {
+                    usleep((int) ($this->retryDelayMs * 1000));
+                }
+            } catch (\Throwable $e) {
+                $lastException = $e;
+                $attempt++;
+
+                if ($this->isTimeoutException($e)) {
+                    $this->markTenantAppDown();
+                    break;
+                }
+
+                if ($attempt < $this->retryAttempts) {
+                    usleep((int) ($this->retryDelayMs * 1000));
+                }
+            }
+        }
+
+        Log::error('TenantAppApiService public request failed', [
+            'method' => $method,
+            'endpoint' => $endpoint,
+            'attempts' => $attempt,
+            'error' => $lastException?->getMessage(),
+        ]);
+
+        return [
+            'success' => false,
+            'error' => $lastException?->getMessage() ?? 'Request failed after retries',
+            'status' => 500,
+        ];
+    }
+
     protected function responseBodyForLog(Response $response, string $endpoint): mixed
     {
         if (! str_ends_with($endpoint, '/credentials')) {
@@ -254,6 +363,14 @@ class TenantAppApiService
     public function getTenantCredentials(int $tenantId): array
     {
         return $this->request('GET', "tenants/{$tenantId}/credentials");
+    }
+
+    public function getCountries(): array
+    {
+        return $this->requestPublic(
+            'GET',
+            '/api/public/options/countries'
+        );
     }
 
     public function backupTenantDatabase(int $tenantId): array

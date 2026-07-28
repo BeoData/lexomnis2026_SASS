@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class TenantRegistrationController extends Controller
@@ -74,6 +75,10 @@ class TenantRegistrationController extends Controller
 
         $initialPlanId = $request->query('plan_id');
         $initialPlanId = is_numeric($initialPlanId) ? (int) $initialPlanId : null;
+        $countriesResponse = $this->apiService->getCountries();
+        $countries = ($countriesResponse['success'] ?? false)
+            ? ($countriesResponse['data'] ?? [])
+            : [];
 
         return Inertia::render('TenantRegistration/Register', [
             'groupedPlans' => $groupedPlans,
@@ -81,6 +86,15 @@ class TenantRegistrationController extends Controller
             'initial_billing_period' => $initialBillingPeriod,
             'initial_plan_id' => $initialPlanId,
             'paypal_enabled' => ! empty(config('services.paypal.client_id')) && ! empty(config('services.paypal.client_secret')),
+            'countries' => $countries,
+            'registration_texts' => [
+                'country_label' => app()->getLocale() === 'sr'
+                    ? 'Država firme'
+                    : 'Firm country',
+                'country_placeholder' => app()->getLocale() === 'sr'
+                    ? 'Izaberite državu'
+                    : 'Select country',
+            ],
         ]);
     }
 
@@ -95,6 +109,17 @@ class TenantRegistrationController extends Controller
             'registration_type' => $request->input('registration_type'),
         ]);
 
+        $countriesResponse = $this->apiService->getCountries();
+        $allowedCountryCodes = collect(
+            ($countriesResponse['success'] ?? false)
+                ? ($countriesResponse['data'] ?? [])
+                : []
+        )->pluck('value')
+            ->filter()
+            ->map(fn ($value) => (string) $value)
+            ->values()
+            ->all();
+
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'], // Can be provided directly or constructed from first_name + last_name
             'first_name' => ['required_without:name', 'string', 'max:255'],
@@ -102,7 +127,7 @@ class TenantRegistrationController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'phone' => ['nullable', 'string', 'max:255'],
-            'country' => ['nullable', 'string', 'max:255'],
+            'country' => ['required', 'string', Rule::in($allowedCountryCodes)],
             'timezone' => ['nullable', 'string'],
             'currency' => ['nullable', 'string', 'max:3'],
             'vat_status' => ['required', 'in:registered,not_registered'],
@@ -127,7 +152,6 @@ class TenantRegistrationController extends Controller
         }
 
         // Set defaults
-        $validated['country'] = $validated['country'] ?? 'RS';
         $validated['timezone'] = $validated['timezone'] ?? 'Europe/Belgrade';
         $validated['currency'] = $validated['currency'] ?? 'RSD';
 
