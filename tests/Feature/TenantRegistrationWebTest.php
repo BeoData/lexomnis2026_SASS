@@ -3,10 +3,8 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Tests\TestCase;
 use Illuminate\Support\Facades\Http;
-use App\Models\User;
+use Tests\TestCase;
 
 class TenantRegistrationWebTest extends TestCase
 {
@@ -28,9 +26,9 @@ class TenantRegistrationWebTest extends TestCase
                     'id' => 1,
                     'name' => 'Test Firm',
                     'slug' => 'test-firm',
-                    'status' => 'pending'
-                ]
-            ], 200)
+                    'status' => 'pending',
+                ],
+            ], 200),
         ]);
 
         $registrationData = [
@@ -43,10 +41,11 @@ class TenantRegistrationWebTest extends TestCase
             'country' => 'RS',
             'timezone' => 'Europe/Belgrade',
             'currency' => 'RSD',
+            'vat_status' => 'registered',
             'registration_type' => 'paid',
             'plan_id' => 1,
             'billing_period' => 'monthly',
-            'payment_method' => 'stripe'
+            'payment_method' => 'stripe',
         ];
 
         $response = $this->post('/register', $registrationData);
@@ -58,7 +57,7 @@ class TenantRegistrationWebTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
             'name' => 'Test User',
-            'role' => 'client'
+            'role' => 'client',
         ]);
     }
 
@@ -75,9 +74,9 @@ class TenantRegistrationWebTest extends TestCase
                     'id' => 1,
                     'name' => 'Test Firm',
                     'slug' => 'test-firm',
-                    'status' => 'active'
-                ]
-            ], 200)
+                    'status' => 'active',
+                ],
+            ], 200),
         ]);
 
         $registrationData = [
@@ -90,8 +89,9 @@ class TenantRegistrationWebTest extends TestCase
             'country' => 'RS',
             'timezone' => 'Europe/Belgrade',
             'currency' => 'RSD',
+            'vat_status' => 'not_registered',
             'registration_type' => 'trial',
-            'trial_days' => 30
+            'trial_days' => 30,
         ];
 
         $response = $this->post('/register', $registrationData);
@@ -103,7 +103,7 @@ class TenantRegistrationWebTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'trial@example.com',
             'name' => 'Test User',
-            'role' => 'client'
+            'role' => 'client',
         ]);
     }
 
@@ -120,10 +120,10 @@ class TenantRegistrationWebTest extends TestCase
                     'id' => 1,
                     'name' => 'Test Firm',
                     'slug' => 'test-firm',
-                    'status' => 'pending'
+                    'status' => 'pending',
                     // No payment_url field
-                ]
-            ], 200)
+                ],
+            ], 200),
         ]);
 
         $registrationData = [
@@ -136,10 +136,11 @@ class TenantRegistrationWebTest extends TestCase
             'country' => 'RS',
             'timezone' => 'Europe/Belgrade',
             'currency' => 'RSD',
+            'vat_status' => 'registered',
             'registration_type' => 'paid',
             'plan_id' => 1,
             'billing_period' => 'monthly',
-            'payment_method' => 'stripe'
+            'payment_method' => 'stripe',
         ];
 
         $response = $this->post('/register', $registrationData);
@@ -152,7 +153,7 @@ class TenantRegistrationWebTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
             'name' => 'Test User',
-            'role' => 'client'
+            'role' => 'client',
         ]);
     }
 
@@ -166,9 +167,9 @@ class TenantRegistrationWebTest extends TestCase
             '*/api/public/tenants/register' => Http::response([
                 'success' => false,
                 'errors' => [
-                    'email' => ['Email already exists']
-                ]
-            ], 422)
+                    'email' => ['Email already exists'],
+                ],
+            ], 422),
         ]);
 
         $registrationData = [
@@ -181,10 +182,11 @@ class TenantRegistrationWebTest extends TestCase
             'country' => 'RS',
             'timezone' => 'Europe/Belgrade',
             'currency' => 'RSD',
+            'vat_status' => 'not_registered',
             'registration_type' => 'paid',
             'plan_id' => 1,
             'billing_period' => 'monthly',
-            'payment_method' => 'stripe'
+            'payment_method' => 'stripe',
         ];
 
         $response = $this->post('/register', $registrationData);
@@ -195,7 +197,44 @@ class TenantRegistrationWebTest extends TestCase
 
         // Should not create user in SASS database
         $this->assertDatabaseMissing('users', [
-            'email' => 'existing@example.com'
+            'email' => 'existing@example.com',
         ]);
+    }
+
+    public function test_registration_requires_vat_status_and_forwards_it_to_main(): void
+    {
+        Http::fake([
+            '*/api/public/tenants/register' => Http::response([
+                'success' => true,
+                'data' => [
+                    'id' => 10,
+                    'name' => 'VAT Firm',
+                    'slug' => 'vat-firm',
+                    'status' => 'active',
+                ],
+            ], 201),
+        ]);
+
+        $payload = [
+            'first_name' => 'VAT',
+            'last_name' => 'Owner',
+            'email' => 'vat-owner@example.test',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'country' => 'RS',
+            'timezone' => 'Europe/Belgrade',
+            'currency' => 'RSD',
+            'registration_type' => 'trial',
+        ];
+
+        $this->post('/register', $payload)
+            ->assertSessionHasErrors('vat_status');
+
+        $this->post('/register', [...$payload, 'vat_status' => 'registered'])
+            ->assertRedirect(route('tenant.register.success'))
+            ->assertSessionDoesntHaveErrors();
+
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/api/public/tenants/register')
+            && $request['vat_status'] === 'registered');
     }
 }

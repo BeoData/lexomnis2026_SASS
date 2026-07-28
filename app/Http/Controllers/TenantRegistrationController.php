@@ -105,6 +105,7 @@ class TenantRegistrationController extends Controller
             'country' => ['nullable', 'string', 'max:255'],
             'timezone' => ['nullable', 'string'],
             'currency' => ['nullable', 'string', 'max:3'],
+            'vat_status' => ['required', 'in:registered,not_registered'],
             'registration_type' => ['required', 'in:trial,paid'],
             'plan_id' => ['required_if:registration_type,paid', 'nullable', 'integer'],
             'billing_period' => ['required_if:registration_type,paid', 'nullable', 'in:monthly,yearly'],

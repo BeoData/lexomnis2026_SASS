@@ -155,6 +155,35 @@
                                         />
                                     </div>
                                 </div>
+
+                                <fieldset>
+                                    <legend class="block text-sm font-medium text-gray-700">
+                                        Da li je firma evidentirana u sistemu PDV-a? *
+                                    </legend>
+                                    <div class="mt-2 flex flex-col gap-3 sm:flex-row">
+                                        <label class="flex items-center gap-2">
+                                            <input
+                                                v-model="form.vat_status"
+                                                type="radio"
+                                                value="registered"
+                                                required
+                                            />
+                                            <span>Da</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input
+                                                v-model="form.vat_status"
+                                                type="radio"
+                                                value="not_registered"
+                                                required
+                                            />
+                                            <span>Ne</span>
+                                        </label>
+                                    </div>
+                                    <div v-if="errors.vat_status" class="mt-1 text-sm text-red-600">
+                                        {{ errors.vat_status }}
+                                    </div>
+                                </fieldset>
                             </div>
                         </div>
 
@@ -377,6 +406,7 @@ const form = useForm({
     country: 'RS',
     timezone: 'Europe/Belgrade',
     currency: 'RSD',
+    vat_status: '',
     registration_type: 'trial',
     plan_id: null,
     billing_period: null,
